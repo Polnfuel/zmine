@@ -3,8 +3,35 @@ const stl = @import("stl");
 
 const LIMIT_BRUTE_FORCE = 10;
 
+const vector = struct {
+    ptr: *anyopaque,
+    size: usize,
+    cap: usize,
+
+    pub fn get_as_u64(self: *const vector) stl.vec.dvec64 {
+        const ptr64: [*]u64 = @ptrCast(@alignCast(self.ptr));
+        const slice = ptr64[0..self.cap];
+        return stl.vec.dvec64{ .array = slice, .size = self.size };
+    }
+
+    pub fn put_as_u64(input: *const stl.vec.dvec64) vector {
+        const ptr: *anyopaque = @ptrCast(@alignCast(input.array.ptr));
+        return vector{ .ptr = ptr, .size = input.size, .cap = input.array.len };
+    }
+
+    pub fn get_as_u128(self: *const vector) stl.vec.dvec128 {
+        const ptr128: [*]u128 = @ptrCast(@alignCast(self.ptr));
+        const slice = ptr128[0..self.cap];
+        return stl.vec.dvec128{ .array = slice, .size = self.size };
+    }
+    pub fn put_as_u128(input: *const stl.vec.dvec128) vector {
+        const ptr: *anyopaque = @ptrCast(@alignCast(input.array.ptr));
+        return vector{ .ptr = ptr, .size = input.size, .cap = input.array.len };
+    }
+};
+
 const NumCellInfo = struct {
-    combs: ?stl.vec.dvec64,
+    combs: ?vector,
     low: u64,
     high: u64,
     constraints: stl.map.miniset16,
@@ -31,37 +58,65 @@ const NumTable = struct {
         self.table[num].mines = mines;
     }
 
+    pub fn set_mask_mines128(self: *NumTable, num: u16, mask: u128, mines: u8) void {
+        self.table[num].low = @truncate(mask);
+        self.table[num].high = @truncate(mask >> 64);
+        self.table[num].mines = mines;
+    }
+
     pub fn set_constraints(self: *NumTable, num: u16, constraints: stl.map.miniset16) void {
         self.table[num].constraints = constraints;
     }
 
-    pub fn set_combs(self: *NumTable, num: u16, combs: stl.vec.dvec64) void {
+    pub fn set_combs64(self: *NumTable, num: u16, combs: stl.vec.dvec64) void {
         const c = self.table[num].combs;
         if (c != null) {
-            const cc = c.?;
+            const cc: stl.vec.dvec64 = c.?.get_as_u64();
             stl.vec.allocator.free(cc.array);
         }
-        self.table[num].combs = combs;
+        self.table[num].combs = vector.put_as_u64(&combs);
     }
 
-    pub fn get_combs(self: *NumTable, num: u16) stl.vec.dvec64 {
-        return self.table[num].combs.?;
+    pub fn set_combs128(self: *NumTable, num: u16, combs: stl.vec.dvec128) void {
+        const c = self.table[num].combs;
+        if (c != null) {
+            const cc: stl.vec.dvec64 = c.?.get_as_u64();
+            stl.vec.allocator.free(cc.array);
+        }
+        self.table[num].combs = vector.put_as_u128(&combs);
     }
+
+    pub fn get_combs64(self: *NumTable, num: u16) stl.vec.dvec64 {
+        return self.table[num].combs.?.get_as_u64();
+    }
+
+    pub fn get_combs128(self: *NumTable, num: u16) stl.vec.dvec128 {
+        return self.table[num].combs.?.get_as_u128();
+    }
+
     pub fn get_constraints(self: *NumTable, num: u16) stl.map.miniset16 {
         return self.table[num].constraints;
     }
+
     pub fn get_mask_mines64(self: *NumTable, num: u16) stl.vec.pair64_8 {
         return stl.vec.pair64_8{
             .first = self.table[num].low,
             .second = self.table[num].mines,
         };
     }
+    pub fn get_mask_mines128(self: *NumTable, num: u16) stl.vec.pair128_8 {
+        return stl.vec.pair128_8{
+            .first = @as(u128, self.table[num].low | @as(u128, self.table[num].high) << 64),
+            .second = self.table[num].mines,
+        };
+    }
+
     pub fn deinit(self: *NumTable) void {
         var i: usize = 0;
         while (i < self.size) : (i += 1) {
             const c = self.table[i].combs;
             if (c != null) {
-                const cc = c.?;
+                const cc = c.?.get_as_u64();
                 stl.vec.allocator.free(cc.array);
             }
         }
@@ -493,7 +548,7 @@ pub const Probs = struct {
                 try num_set.ins(cell_index);
                 var combos = try stl.vec.dvec64.new(10);
                 try bit_combs64(mask, mine_count, &combos);
-                self.num_table.set_combs(cell_index, combos);
+                self.num_table.set_combs64(cell_index, combos);
                 self.num_table.set_mask_mines64(cell_index, mask, @as(u8, @popCount(mask)) - mine_count);
             }
         }
@@ -592,7 +647,7 @@ pub const Probs = struct {
     }
     fn mine_combinations64(self: *Probs, current_number: u16, mask: u64, num_set: *const stl.vec.vec16, count_to_index: *stl.vec.vec8, result: *stl.vec.dvecvec64, mapping: *const stl.vec.vec8) !void {
         const constraints = self.num_table.get_constraints(current_number);
-        const combs = self.num_table.get_combs(current_number);
+        const combs = self.num_table.get_combs64(current_number);
 
         var i: usize = 0;
         while (i < combs.size) : (i += 1) {
@@ -639,6 +694,207 @@ pub const Probs = struct {
         while (maskcpy > 0) {
             const t = @ctz(maskcpy);
             maskcpy &= maskcpy - 1;
+            const ind2 = mapping.at(t);
+            c.array[ind2] += 1;
+        }
+        c.array[self.edge_cells_count] += 1;
+    }
+
+    fn find_all_combinations128(self: *Probs, edge_cells: *const stl.vec.dvec16, num_cells: *const stl.vec.dvecpair16_8, combs: *stl.map.mapvec64) !void {
+        const edge_size = edge_cells.size;
+        var num_size = num_cells.size;
+        var mapping = try stl.vec.vec8.new(edge_size);
+        defer mapping.free();
+        @memset(self.temp_field.array, std.math.maxInt(u8));
+
+        var i: usize = 0;
+        while (i < edge_size) : (i += 1) {
+            const cell = edge_cells.at(i);
+            const ind = std.sort.binarySearch(u16, self.edge_cells_list.array[0..self.edge_cells_list.size], cell, stl.map.set16.u16Order).?;
+            mapping.set(i, @truncate(ind));
+            self.temp_field.set(cell, @truncate(i));
+        }
+
+        var seen_masks = try stl.map.set128.new(num_size);
+        defer seen_masks.free();
+        var num_set = try stl.map.set16.new(num_size);
+        defer num_set.free();
+
+        i = 0;
+        while (i < num_size) : (i += 1) {
+            const num = num_cells.at(i);
+            const cell_index = num.first;
+            const mine_count = num.second;
+            const neighbors = self.get_neis(cell_index);
+            var mask: u128 = 0;
+
+            var j: usize = 0;
+            while (j < neighbors.size) : (j += 1) {
+                const nei_index = neighbors.at(j);
+                const val = self.cell_to_bit(nei_index);
+                if (val != 127) {
+                    mask |= (@as(u128, 1) << val);
+                }
+            }
+
+            if (!seen_masks.has(mask)) {
+                try seen_masks.ins(mask);
+                try num_set.ins(cell_index);
+                var combos = try stl.vec.dvec128.new(10);
+                try bit_combs128(mask, mine_count, &combos);
+                self.num_table.set_combs128(cell_index, combos);
+                self.num_table.set_mask_mines128(cell_index, mask, @as(u8, @popCount(mask)) - mine_count);
+            }
+        }
+        num_size = num_set.size;
+
+        var edges_neis = try stl.vec.vecneis.new(edge_size);
+        defer edges_neis.free();
+        i = 0;
+        while (i < edge_size) : (i += 1) {
+            const edge = edge_cells.at(i);
+            const neighbors = self.get_neis(edge);
+            var edge_neis: stl.vec.neis = undefined;
+            edge_neis.size = 0;
+            var j: usize = 0;
+            while (j < neighbors.size) : (j += 1) {
+                const nei = neighbors.at(j);
+                if (num_set.has(nei)) {
+                    edge_neis.add(nei);
+                }
+            }
+            edges_neis.add(edge_neis);
+        }
+
+        i = 0;
+        while (i < num_size) : (i += 1) {
+            const num = num_set.at(i);
+            const num_neighbors = self.get_neis(num);
+            var constraints: stl.map.miniset16 = undefined;
+            constraints.size = 0;
+            var j: usize = 0;
+            while (j < num_neighbors.size) : (j += 1) {
+                const nei = num_neighbors.at(j);
+                const index = edge_cells.index_of(nei);
+                if (index != std.math.maxInt(usize)) {
+                    const edges = edges_neis.at(index);
+                    var k: usize = 0;
+                    while (k < edges.size) : (k += 1) {
+                        const edge = edges.at(k);
+                        constraints.ins(edge);
+                    }
+                }
+            }
+            self.num_table.set_constraints(num, constraints);
+        }
+
+        const num_vec: stl.vec.vec16 = stl.vec.vec16{ .array = num_set.array };
+
+        var count_to_index = try stl.vec.vec8.new(edge_size + 1);
+        defer count_to_index.free();
+        count_to_index.fill(std.math.maxInt(u8));
+        var result = try stl.vec.dvecvec64.new(5);
+        defer stl.vec.allocator.free(result.array);
+
+        self.last_number = num_vec.at(num_size - 1);
+        try self.mine_combinations128(num_vec.at(0), 0, &num_vec, &count_to_index, &result, &mapping);
+
+        var bit_count: usize = 0;
+        while (bit_count < edge_size) : (bit_count += 1) {
+            const index = count_to_index.at(bit_count);
+            if (index != std.math.maxInt(u8)) {
+                const val = result.at(index);
+                combs.set(bit_count, val);
+            }
+        }
+    }
+    fn bit_combs128(full_mask: u128, k: u8, result: *stl.vec.dvec128) !void {
+        var bit_pos: [128]u8 = undefined;
+        var bit_size: usize = 0;
+        var i: u8 = 0;
+        while (i < 128) : (i += 1) {
+            if (full_mask & (@as(u128, 1) << @as(u7, @truncate(i))) > 0) {
+                bit_pos[bit_size] = i;
+                bit_size += 1;
+            }
+        }
+        const total: u8 = @truncate(bit_size);
+        if (k > total) {
+            return;
+        }
+        var selection = try stl.vec.vecbool.new(total, k);
+        defer selection.free();
+
+        while (true) {
+            var mask: u128 = 0;
+            var j: usize = 0;
+            while (j < total) : (j += 1) {
+                if (selection.at(j)) {
+                    mask |= @as(u128, 1) << @as(u7, @truncate(bit_pos[j]));
+                }
+            }
+            try result.add(mask);
+            if (!selection.prevperm()) {
+                break;
+            }
+        }
+    }
+    fn mine_combinations128(self: *Probs, current_number: u16, mask: u128, num_set: *const stl.vec.vec16, count_to_index: *stl.vec.vec8, result: *stl.vec.dvecvec64, mapping: *const stl.vec.vec8) !void {
+        const constraints = self.num_table.get_constraints(current_number);
+        const combs = self.num_table.get_combs128(current_number);
+
+        var i: usize = 0;
+        while (i < combs.size) : (i += 1) {
+            const combo = combs.at(i);
+            const new_mask = mask | combo;
+            var valid = true;
+
+            var j: usize = 0;
+            while (j < constraints.size) : (j += 1) {
+                const constraint = constraints.at(j);
+                const mask_mine = self.num_table.get_mask_mines128(constraint);
+                const constraint_mask = mask_mine.first;
+                const mines = mask_mine.second;
+                const different_bits: u8 = @popCount((new_mask ^ constraint_mask) & constraint_mask);
+
+                if (different_bits < mines) {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid) {
+                if (current_number != self.last_number) {
+                    const next_number = num_set.next(current_number);
+                    try self.mine_combinations128(next_number, new_mask, num_set, count_to_index, result, mapping);
+                } else {
+                    const bit_count: u8 = @popCount(new_mask);
+                    if (bit_count <= self.remain_mines) {
+                        try self.add_combination128(new_mask, bit_count, count_to_index, result, mapping);
+                    }
+                }
+            }
+        }
+    }
+    fn add_combination128(self: *Probs, mask: u128, bit_count: u8, count_to_index: *stl.vec.vec8, result: *stl.vec.dvecvec64, mapping: *const stl.vec.vec8) !void {
+        if (count_to_index.at(bit_count) == std.math.maxInt(u8)) {
+            count_to_index.set(bit_count, @truncate(result.size));
+            const v = try stl.vec.vec64.new(self.edge_cells_count + 1);
+            try result.add(v);
+        }
+        const ind = count_to_index.at(bit_count);
+        var c = result.at(ind);
+        var low: u64 = @truncate(mask);
+        while (low > 0) {
+            const t = @ctz(low);
+            low &= low - 1;
+            const ind2 = mapping.at(t);
+            c.array[ind2] += 1;
+        }
+        var high: u64 = @truncate(mask >> 64);
+        while (high > 0) {
+            const t = @ctz(high);
+            high &= high - 1;
             const ind2 = mapping.at(t);
             c.array[ind2] += 1;
         }
@@ -855,8 +1111,7 @@ pub const Probs = struct {
             } else if (edge_cells.size <= 64) {
                 try self.find_all_combinations64(&edge_cells, &num_cells, &combs);
             } else {
-                return A.ProbsError;
-                // self.find_all_combinations128(&edge_cells, &num_cells, &combs);
+                try self.find_all_combinations128(&edge_cells, &num_cells, &combs);
             }
             group_maps.set(group, combs);
         }

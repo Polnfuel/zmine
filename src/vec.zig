@@ -325,9 +325,9 @@ pub const dvec128 = struct {
         self.array = new_arr;
     }
 
-    pub fn add(self: *dvec128, value: u128) void {
+    pub fn add(self: *dvec128, value: u128) !void {
         if (self.size >= self.array.len) {
-            self.realloc(self.array.len * 2 + 1);
+            try self.realloc(self.array.len * 2 + 1);
         }
         self.array[self.size] = value;
         self.size += 1;
