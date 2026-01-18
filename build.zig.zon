@@ -1,0 +1,15 @@
+.{
+    .name = .zigmine,
+    .version = "0.0.0",
+    .fingerprint = 0x9971a95b5d9993bb,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}
