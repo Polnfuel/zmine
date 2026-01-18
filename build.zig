@@ -50,6 +50,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zigmine", .module = mod },
             },
+            .link_libc = true,
         }),
     });
 
@@ -98,6 +99,11 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "zigmine", .module = mod },
             },
+            .link_libc = true,
+            .strip = true,
+            .single_threaded = true,
+            .error_tracing = false,
+            .omit_frame_pointer = true,
         }),
     });
     b.installArtifact(exesfast);

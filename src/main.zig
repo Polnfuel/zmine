@@ -2,8 +2,7 @@ const std = @import("std");
 const zigmine = @import("zigmine");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = false }).init;
-    const allocator = gpa.allocator();
+    const allocator = std.heap.c_allocator;
     zigmine.stl.set_alloc(allocator);
 
     var stdout_buffer: [2000]u8 = undefined;

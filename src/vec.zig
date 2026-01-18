@@ -10,9 +10,6 @@ pub const vec8 = struct {
     array: []u8,
 
     pub fn new(size: usize) !vec8 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u8, size);
         return vec8{ .array = arr };
     }
@@ -22,9 +19,6 @@ pub const vec8 = struct {
     }
 
     pub fn realloc(self: *vec8, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []u8 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -38,9 +32,6 @@ pub const vec8 = struct {
     }
 
     pub fn free(self: *vec8) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -49,9 +40,6 @@ pub const vec16 = struct {
     array: []u16,
 
     pub fn new(size: usize) !vec16 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u16, size);
         return vec16{ .array = arr };
     }
@@ -74,9 +62,6 @@ pub const vec16 = struct {
     }
 
     pub fn free(self: vec16) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -85,9 +70,6 @@ pub const vec64 = struct {
     array: []u64,
 
     pub fn new(size: usize) !vec64 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u64, size);
         @memset(arr, 0);
         return vec64{ .array = arr };
@@ -102,9 +84,6 @@ pub const vecbool = struct {
     array: []bool,
 
     pub fn new(size: usize, fill: u8) !vecbool {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(bool, size);
         @memset(arr, false);
         @memset(arr[0..fill], true);
@@ -128,28 +107,6 @@ pub const vecbool = struct {
     }
 
     pub fn prevperm(self: *vecbool) bool {
-        // const first = self.array.ptr;
-        // const last = self.array.ptr + self.array.len;
-
-        // if (first == last) return false;
-        // var i = last - 1;
-        // if (first == i) return false;
-        // while (true) {
-        //     const a = i;
-        //     var b = i;
-        //     i -= 1;
-        //     if (!a[0] and i[0]) {
-        //         b = last;
-        //         while (!((--b).* < i.*)) {}
-        //         iter_swap(i, b);
-        //         reverse(a, last);
-        //         return true;
-        //     }
-        //     if (i == first) {
-        //         reverse(first, last);
-        //         return false;
-        //     }
-        // }
         if (self.array.len <= 1) return false;
 
         var i: usize = self.array.len - 1;
@@ -174,9 +131,6 @@ pub const vecbool = struct {
     }
 
     pub fn free(self: vecbool) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -200,9 +154,6 @@ pub const vecneis = struct {
     size: usize,
 
     pub fn new(size: usize) !vecneis {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(neis, size);
         return vecneis{ .array = arr, .size = 0 };
     }
@@ -230,9 +181,6 @@ pub const vecneis = struct {
     }
 
     pub fn free(self: *vecneis) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -242,9 +190,6 @@ pub const dvec8 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvec8 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u8, init_cap);
         return dvec8{ .array = arr, .size = 0 };
     }
@@ -254,9 +199,6 @@ pub const dvec8 = struct {
     }
 
     pub fn realloc(self: *dvec8, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []u8 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -270,9 +212,6 @@ pub const dvec8 = struct {
     }
 
     pub fn free(self: dvec8) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -282,9 +221,6 @@ pub const dvec16 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvec16 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u16, init_cap);
         return dvec16{ .array = arr, .size = 0 };
     }
@@ -294,9 +230,6 @@ pub const dvec16 = struct {
     }
 
     pub fn realloc(self: *dvec16, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []u16 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -334,9 +267,6 @@ pub const dvec16 = struct {
     }
 
     pub fn free(self: dvec16) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -346,9 +276,6 @@ pub const dvec64 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvec64 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u64, init_cap);
         return dvec64{ .array = arr, .size = 0 };
     }
@@ -358,9 +285,6 @@ pub const dvec64 = struct {
     }
 
     pub fn realloc(self: *dvec64, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []u64 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -388,9 +312,6 @@ pub const dvec128 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvec128 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(u128, init_cap);
         return dvec128{ .array = arr, .size = 0 };
     }
@@ -400,9 +321,6 @@ pub const dvec128 = struct {
     }
 
     pub fn realloc(self: *dvec128, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []u128 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -430,9 +348,6 @@ pub const dvecvec64 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvecvec64 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(vec64, init_cap);
         return dvecvec64{ .array = arr, .size = 0 };
     }
@@ -442,9 +357,6 @@ pub const dvecvec64 = struct {
     }
 
     pub fn realloc(self: *dvecvec64, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []vec64 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -468,9 +380,6 @@ pub const dvecpair16_8 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvecpair16_8 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(pair16_8, init_cap);
         return dvecpair16_8{ .array = arr, .size = 0 };
     }
@@ -480,9 +389,6 @@ pub const dvecpair16_8 = struct {
     }
 
     pub fn realloc(self: *dvecpair16_8, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []pair16_8 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -512,9 +418,6 @@ pub const dvecpair16_8 = struct {
     }
 
     pub fn free(self: *dvecpair16_8) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         allocator.free(self.array);
     }
 };
@@ -539,9 +442,6 @@ pub const dvecpairdvec16_dvecpair16_8 = struct {
     size: usize,
 
     pub fn new(init_cap: usize) !dvecpairdvec16_dvecpair16_8 {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const arr = try allocator.alloc(pairdvec16_dvecpair16_8, init_cap);
         return dvecpairdvec16_dvecpair16_8{ .array = arr, .size = 0 };
     }
@@ -551,9 +451,6 @@ pub const dvecpairdvec16_dvecpair16_8 = struct {
     }
 
     pub fn realloc(self: *dvecpairdvec16_dvecpair16_8, new_size: usize) !void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-        // const allocator = gpa.allocator();
-
         const new_arr: []pairdvec16_dvecpair16_8 = try allocator.realloc(self.array, new_size);
         self.array = new_arr;
     }
@@ -567,9 +464,6 @@ pub const dvecpairdvec16_dvecpair16_8 = struct {
     }
 
     pub fn free(self: *dvecpairdvec16_dvecpair16_8) void {
-        // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-        // const allocator = gpa.allocator();
-
         var i: usize = 0;
         while (i < self.size) : (i += 1) {
             const pair = self.array[i];
