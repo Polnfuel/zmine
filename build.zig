@@ -69,25 +69,25 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    const exesmall = b.addExecutable(.{
-        .name = "mainsmall",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = .ReleaseSmall,
-            .imports = &.{
-                .{ .name = "zigmine", .module = mod },
-            },
-        }),
-    });
-    b.installArtifact(exesmall);
-    const run_step_small = b.step("runsmall", "Run in release small mode");
-    const run_cmd_small = b.addRunArtifact(exesmall);
-    run_step_small.dependOn(&run_cmd_small.step);
-    run_cmd_small.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd_small.addArgs(args);
-    }
+    // const exesmall = b.addExecutable(.{
+    //     .name = "mainsmall",
+    //     .root_module = b.createModule(.{
+    //         .root_source_file = b.path("src/main.zig"),
+    //         .target = target,
+    //         .optimize = .ReleaseSmall,
+    //         .imports = &.{
+    //             .{ .name = "zigmine", .module = mod },
+    //         },
+    //     }),
+    // });
+    // b.installArtifact(exesmall);
+    // const run_step_small = b.step("runsmall", "Run in release small mode");
+    // const run_cmd_small = b.addRunArtifact(exesmall);
+    // run_step_small.dependOn(&run_cmd_small.step);
+    // run_cmd_small.step.dependOn(b.getInstallStep());
+    // if (b.args) |args| {
+    //     run_cmd_small.addArgs(args);
+    // }
 
     const exesfast = b.addExecutable(.{
         .name = "mainfast",

@@ -1,8 +1,11 @@
 const std = @import("std");
 const vec = @import("vec");
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-pub var allocator: std.mem.Allocator = gpa.allocator();
+var allocator: std.mem.Allocator = undefined;
+
+pub fn set_alloc(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
 
 pub const miniset16 = struct {
     data: [24]u16,

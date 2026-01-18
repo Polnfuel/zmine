@@ -1,7 +1,10 @@
 const std = @import("std");
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-pub var allocator: std.mem.Allocator = gpa.allocator();
+pub var allocator: std.mem.Allocator = undefined;
+
+pub fn set_alloc(alloc: std.mem.Allocator) void {
+    allocator = alloc;
+}
 
 pub const vec8 = struct {
     array: []u8,

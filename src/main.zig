@@ -1,40 +1,11 @@
 const std = @import("std");
 const zigmine = @import("zigmine");
 
-// test "vectors" {
-//     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-//     const allocator = gpa.allocator();
-//     const neis = zigmine.stl.vec.neis;
-//     var array: []neis = undefined;
-
-//     array = try allocator.alloc(neis, 40);
-//     defer allocator.free(array);
-
-//     array[0] = neis{ .cells = [8]u16{ 1, 20, 23, 0, 0, 0, 0, 0 }, .size = 3 };
-//     array[8] = neis{ .cells = [8]u16{ 2, 20, 23, 0, 0, 0, 0, 0 }, .size = 3 };
-
-//     array = try allocator.realloc(array, 92);
-//     array[80] = neis{ .cells = [8]u16{ 3, 20, 23, 0, 0, 0, 0, 0 }, .size = 3 };
-
-//     try std.testing.expect(array[0].cells[0] == 1);
-//     try std.testing.expect(array[80].cells[0] == 3);
-//     std.debug.print("Tested", .{});
-// }
-
-// test "stltest" {
-//     const vecneis = zigmine.stl.vec.vecneis;
-//     zigmine.init_all();
-//     var array: vecneis = try zigmine.stl.vec.vecneis.new(40);
-//     defer array.free();
-
-//     array.add3(1, 20, 23);
-
-//     try std.testing.expect(array.at(0).cells[1] == 20);
-//     // try std.testing.expect(array[80].cells[0] == 3);
-//     std.debug.print("Tested", .{});
-// }
-
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{ .safety = false }).init;
+    const allocator = gpa.allocator();
+    zigmine.stl.set_alloc(allocator);
+
     var stdout_buffer: [2000]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
