@@ -23,12 +23,12 @@ pub const Engine = struct {
             .field_width = w,
             .total_mines = m,
             .real_size = @as(u16, w) * h,
-            .game_field = try stl.vec.vec8.new(@as(usize, w) * h),
+            .game_field = undefined,
             .visible_field = try stl.vec.vec8.new(@as(usize, w) * h),
             .playing = false,
             .won = false,
         };
-        neis_cache.free();
+        // neis_cache.free();
         try eng.set_neis_cache();
         indices = try stl.vec.vec16.new(eng.real_size);
         eng.set_indices();
@@ -37,8 +37,8 @@ pub const Engine = struct {
         return eng;
     }
 
-    pub fn start_game(self: *Engine, first_click: u16) !void {
-        self.gen_field(first_click);
+    pub fn start_game(self: *Engine, first_click: u16, field_start: []u8) !void {
+        self.gen_field(field_start);
         self.playing = true;
         self.won = false;
         try self.open_cell(first_click);
@@ -117,32 +117,9 @@ pub const Engine = struct {
         return x;
     }
 
-    fn gen_field(self: *Engine, first_click: u16) void {
-        self.game_field.fill(0);
+    fn gen_field(self: *Engine, field_start: []u8) void {
+        self.game_field.array = field_start;
         self.visible_field.fill(9);
-
-        var i: u16 = 0;
-        while (i < self.total_mines) : (i += 1) {
-            var j: u16 = 0;
-            while (true) {
-                const a: u16 = @truncate(xorshift_rnd() % (self.field_size - i));
-                j = i + a;
-
-                if (indices.at(j) != first_click) {
-                    break;
-                }
-            }
-            const tmp = indices.at(i);
-            indices.set(i, indices.at(j));
-            indices.set(j, tmp);
-            self.game_field.set(indices.at(i), 12);
-        }
-        var cell: u16 = 0;
-        while (cell < self.field_size) : (cell += 1) {
-            if (self.game_field.at(cell) != 12) {
-                self.game_field.set(cell, self.count_mines(cell));
-            }
-        }
 
         @memset(self.visible_field.array[self.field_size..self.real_size], 26);
         self.set_indices();
@@ -217,7 +194,7 @@ pub const Engine = struct {
     pub fn deinit(self: *Engine) void {
         indices.free();
         neis_cache.free();
-        self.game_field.free();
+        // self.game_field.free();
         self.visible_field.free();
     }
 

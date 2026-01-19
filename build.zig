@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    // const optimize = b.standardOptimizeOption(.{});
 
     const vec = b.addModule("vec", .{
         .root_source_file = b.path("src/vec.zig"),
@@ -41,34 +41,34 @@ pub fn build(b: *std.Build) void {
         .{ .name = "bot", .module = bot },
     } });
 
-    const exe = b.addExecutable(.{
-        .name = "main",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = &.{
-                .{ .name = "zigmine", .module = mod },
-            },
-            .link_libc = true,
-        }),
-    });
+    // const exe = b.addExecutable(.{
+    //     .name = "main",
+    //     .root_module = b.createModule(.{
+    //         .root_source_file = b.path("src/main.zig"),
+    //         .target = target,
+    //         .optimize = optimize,
+    //         .imports = &.{
+    //             .{ .name = "zigmine", .module = mod },
+    //         },
+    //         .link_libc = true,
+    //     }),
+    // });
 
-    exe.use_llvm = true;
+    // exe.use_llvm = true;
 
-    b.installArtifact(exe);
+    // b.installArtifact(exe);
 
-    const run_step = b.step("run", "Run the app");
+    // const run_step = b.step("run", "Run the app");
 
-    const run_cmd = b.addRunArtifact(exe);
+    // const run_cmd = b.addRunArtifact(exe);
 
-    run_step.dependOn(&run_cmd.step);
+    // run_step.dependOn(&run_cmd.step);
 
-    run_cmd.step.dependOn(b.getInstallStep());
+    // run_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    // if (b.args) |args| {
+    //     run_cmd.addArgs(args);
+    // }
 
     // const exesmall = b.addExecutable(.{
     //     .name = "mainsmall",
@@ -90,44 +90,47 @@ pub fn build(b: *std.Build) void {
     //     run_cmd_small.addArgs(args);
     // }
 
-    const exesfast = b.addExecutable(.{
-        .name = "mainfast",
+    // const exesfast = b.addExecutable(.{
+    //     .name = "mainfast",
+    //     .root_module = b.createModule(.{
+    //         .root_source_file = b.path("src/main.zig"),
+    //         .target = target,
+    //         .optimize = .ReleaseFast,
+    //         .imports = &.{
+    //             .{ .name = "zigmine", .module = mod },
+    //         },
+    //         .link_libc = true,
+    //         .strip = true,
+    //         .single_threaded = true,
+    //         .error_tracing = false,
+    //         .omit_frame_pointer = true,
+    //     }),
+    // });
+    // b.installArtifact(exesfast);
+    // const run_step_fast = b.step("runfast", "Run in release fast mode");
+    // const run_cmd_fast = b.addRunArtifact(exesfast);
+    // run_step_fast.dependOn(&run_cmd_fast.step);
+    // run_cmd_fast.step.dependOn(b.getInstallStep());
+    // if (b.args) |args| {
+    //     run_cmd_fast.addArgs(args);
+    // }
+
+    const test_exe = b.addTest(.{
+        .name = "unit_tests",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
-            .optimize = .ReleaseFast,
             .imports = &.{
                 .{ .name = "zigmine", .module = mod },
             },
-            .link_libc = true,
-            .strip = true,
-            .single_threaded = true,
-            .error_tracing = false,
-            .omit_frame_pointer = true,
         }),
     });
-    b.installArtifact(exesfast);
-    const run_step_fast = b.step("runfast", "Run in release fast mode");
-    const run_cmd_fast = b.addRunArtifact(exesfast);
-    run_step_fast.dependOn(&run_cmd_fast.step);
-    run_cmd_fast.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd_fast.addArgs(args);
-    }
 
-    // const test_exe = b.addTest(.{
-    //     .name = "unit_tests",
-    //     .root_module = b.createModule(.{
-    //         .root_source_file = b.path("src/map.zig"),
-    //         .target = target,
-    //         // .imports = &.{
-    //         //     .{ .name = "zigmine", .module = mod },
-    //         // },
-    //     }),
-    // });
+    const install_flds_step = b.addInstallFile(b.path("flds"), "flds");
 
-    // b.installArtifact(test_exe);
-    // const run_cmd_tests = b.addRunArtifact(test_exe);
-    // const run_step_tests = b.step("tests", "Run unit tests");
-    // run_step_tests.dependOn(&run_cmd_tests.step);
+    b.installArtifact(test_exe);
+    b.getInstallStep().dependOn(&install_flds_step.step);
+    const run_cmd_tests = b.addRunArtifact(test_exe);
+    const run_step_tests = b.step("tests", "Run unit tests");
+    run_step_tests.dependOn(&run_cmd_tests.step);
 }
