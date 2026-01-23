@@ -28,21 +28,46 @@ pub const Bot = struct {
             return A.ProbsError;
         }
 
-        var min_val: u8 = std.math.maxInt(u8);
-        var min_idx: u16 = 0;
-
+        const p27: @Vector(16, u8) = @splat(27);
         var i: u16 = 0;
-        while (i < self.prob.field_size) : (i += 1) {
-            if (prob_field.at(i) == 27) {
-                try self.suggests.add(i);
-            } else if (prob_field.at(i) < min_val and prob_field.at(i) > 27) {
-                min_val = prob_field.at(i);
-                min_idx = i;
+        while (i < prob_field.array.len) : (i += 16) {
+            const data: @Vector(16, u8) = prob_field.array[i..][0..16].*;
+            const cmp = data == p27;
+            var mask: u16 = @bitCast(cmp);
+            while (mask > 0) {
+                const idx: u16 = @ctz(mask);
+                try self.suggests.add(i + idx);
+                mask &= mask - 1;
             }
         }
 
         if (self.suggests.size == 0) {
-            try self.suggests.add(min_idx);
+            var min_val: u8 = std.math.maxInt(u8);
+            var min_idx: u16 = 0;
+
+            const max: @Vector(16, u8) = @splat(std.math.maxInt(i8));
+            var best = max;
+
+            i = 0;
+            while (i < prob_field.array.len) : (i += 16) {
+                const data: @Vector(16, u8) = prob_field.array[i..][0..16].*;
+                var valid: @Vector(16, u8) = @intFromBool(data > p27);
+                valid = valid * max;
+                const masked: @Vector(16, u8) = (valid & data) | (~valid & max);
+                best = @min(best, masked);
+            }
+            min_val = @reduce(.Min, best);
+
+            if (min_val != std.math.maxInt(i8)) {
+                i = 0;
+                while (i < prob_field.array.len) : (i += 1) {
+                    if (prob_field.at(i) == min_val) {
+                        min_idx = i;
+                        break;
+                    }
+                }
+                try self.suggests.add(min_idx);
+            }
         }
 
         return self.suggests;
