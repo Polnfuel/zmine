@@ -28,7 +28,6 @@ pub const Engine = struct {
             .playing = false,
             .won = false,
         };
-        neis_cache.free();
         try eng.set_neis_cache();
         indices = try stl.vec.vec16.new(eng.real_size);
         eng.set_indices();
@@ -42,13 +41,13 @@ pub const Engine = struct {
         self.playing = true;
         self.won = false;
         try self.open_cell(first_click);
-        // try self.print_field();
     }
 
     fn set_indices(self: *Engine) void {
-        var i: usize = 0;
-        while (i < self.real_size) : (i += 1) {
-            indices.set(i, @intCast(i));
+        var i: u16 = 0;
+        while (i < self.real_size) : (i += 8) {
+            const a = [8]u16{ i + 7, i + 6, i + 5, i + 4, i + 3, i + 2, i + 1, i };
+            @memcpy(indices.array[i .. i + 8], a[0..8]);
         }
     }
 
@@ -98,14 +97,29 @@ pub const Engine = struct {
 
     fn count_mines(self: *Engine, cell: u16) u8 {
         const neighbors = get_neis(cell);
-        var count: u8 = 0;
-        var i: usize = 0;
-        while (i < neighbors.size) : (i += 1) {
-            if (self.game_field.at(neighbors.at(i)) == 12) {
-                count += 1;
-            }
+        const f = self.game_field.array;
+        const n = neighbors.cells;
+        switch (neighbors.size) {
+            8 => {
+                @branchHint(.likely);
+                return @as(u8, @intFromBool(f[n[0]] == 12)) + @as(u8, @intFromBool(f[n[1]] == 12)) +
+                    @as(u8, @intFromBool(f[n[2]] == 12)) + @as(u8, @intFromBool(f[n[3]] == 12)) +
+                    @as(u8, @intFromBool(f[n[4]] == 12)) + @as(u8, @intFromBool(f[n[5]] == 12)) +
+                    @as(u8, @intFromBool(f[n[6]] == 12)) + @as(u8, @intFromBool(f[n[7]] == 12));
+            },
+            5 => {
+                return @as(u8, @intFromBool(f[n[0]] == 12)) + @as(u8, @intFromBool(f[n[1]] == 12)) +
+                    @as(u8, @intFromBool(f[n[2]] == 12)) + @as(u8, @intFromBool(f[n[3]] == 12)) +
+                    @as(u8, @intFromBool(f[n[4]] == 12));
+            },
+            3 => {
+                return @as(u8, @intFromBool(f[n[0]] == 12)) + @as(u8, @intFromBool(f[n[1]] == 12)) +
+                    @as(u8, @intFromBool(f[n[2]] == 12));
+            },
+            else => {
+                unreachable;
+            },
         }
-        return count;
     }
 
     fn xorshift_rnd() u32 {
@@ -151,10 +165,12 @@ pub const Engine = struct {
     fn check_end(self: *Engine) bool {
         var count: u16 = 0;
         var i: usize = 0;
-        while (i < self.real_size) : (i += 1) {
-            if (self.visible_field.at(i) < 9) {
-                count += 1;
-            }
+        const nine: @Vector(16, u8) = @splat(9);
+        while (i < self.real_size) : (i += 16) {
+            const data: @Vector(16, u8) = self.visible_field.array[i..][0..16].*;
+            const cmp = data < nine;
+            const mask: u16 = @bitCast(cmp);
+            count += @popCount(mask);
         }
         return (count == self.field_size - self.total_mines);
     }

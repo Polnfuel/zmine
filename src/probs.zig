@@ -191,28 +191,129 @@ pub const Probs = struct {
     }
     fn set_flags_and_float_cells(self: *Probs) !void {
         self.temp_field.fill(26);
+        const f = self.game_field.array;
         var i: usize = 0;
         while (i < self.field_size) : (i += 1) {
             const gameval = self.game_field.at(i);
             const neighbors = self.get_neis(@truncate(i));
             var closed_count: u8 = 0;
-            var j: usize = 0;
-            while (j < neighbors.size) : (j += 1) {
-                if (self.game_field.at(neighbors.at(j)) == 9) {
-                    closed_count += 1;
-                }
+            const n = neighbors.cells;
+            switch (neighbors.size) {
+                8 => {
+                    @branchHint(.likely);
+                    closed_count = @as(u8, @intFromBool(f[n[0]] == 9)) + @as(u8, @intFromBool(f[n[1]] == 9)) +
+                        @as(u8, @intFromBool(f[n[2]] == 9)) + @as(u8, @intFromBool(f[n[3]] == 9)) +
+                        @as(u8, @intFromBool(f[n[4]] == 9)) + @as(u8, @intFromBool(f[n[5]] == 9)) +
+                        @as(u8, @intFromBool(f[n[6]] == 9)) + @as(u8, @intFromBool(f[n[7]] == 9));
+                },
+                5 => {
+                    closed_count = @as(u8, @intFromBool(f[n[0]] == 9)) + @as(u8, @intFromBool(f[n[1]] == 9)) +
+                        @as(u8, @intFromBool(f[n[2]] == 9)) + @as(u8, @intFromBool(f[n[3]] == 9)) +
+                        @as(u8, @intFromBool(f[n[4]] == 9));
+                },
+                3 => {
+                    closed_count = @as(u8, @intFromBool(f[n[0]] == 9)) + @as(u8, @intFromBool(f[n[1]] == 9)) +
+                        @as(u8, @intFromBool(f[n[2]] == 9));
+                },
+                else => {
+                    unreachable;
+                },
             }
             if (gameval == 9 and closed_count == neighbors.size) {
                 try self.float_cells_list.add(@truncate(i));
                 self.temp_field.set(i, 26);
             } else if (gameval > 0 and gameval < 9 and gameval == closed_count) {
-                j = 0;
-                while (j < neighbors.size) : (j += 1) {
-                    if (self.game_field.at(neighbors.at(j)) == 9) {
-                        self.temp_field.set(neighbors.at(j), 11);
-                    } else {
-                        self.temp_field.set(neighbors.at(j), self.game_field.at(neighbors.at(j)));
-                    }
+                switch (neighbors.size) {
+                    8 => {
+                        @branchHint(.likely);
+                        if (f[n[0]] == 9) {
+                            self.temp_field.set(n[0], 11);
+                        } else {
+                            self.temp_field.set(n[0], f[n[0]]);
+                        }
+                        if (f[n[1]] == 9) {
+                            self.temp_field.set(n[1], 11);
+                        } else {
+                            self.temp_field.set(n[1], f[n[1]]);
+                        }
+                        if (f[n[2]] == 9) {
+                            self.temp_field.set(n[2], 11);
+                        } else {
+                            self.temp_field.set(n[2], f[n[2]]);
+                        }
+                        if (f[n[3]] == 9) {
+                            self.temp_field.set(n[3], 11);
+                        } else {
+                            self.temp_field.set(n[3], f[n[3]]);
+                        }
+                        if (f[n[4]] == 9) {
+                            self.temp_field.set(n[4], 11);
+                        } else {
+                            self.temp_field.set(n[4], f[n[4]]);
+                        }
+                        if (f[n[5]] == 9) {
+                            self.temp_field.set(n[5], 11);
+                        } else {
+                            self.temp_field.set(n[5], f[n[5]]);
+                        }
+                        if (f[n[6]] == 9) {
+                            self.temp_field.set(n[6], 11);
+                        } else {
+                            self.temp_field.set(n[6], f[n[6]]);
+                        }
+                        if (f[n[7]] == 9) {
+                            self.temp_field.set(n[7], 11);
+                        } else {
+                            self.temp_field.set(n[7], f[n[7]]);
+                        }
+                    },
+                    5 => {
+                        if (f[n[0]] == 9) {
+                            self.temp_field.set(n[0], 11);
+                        } else {
+                            self.temp_field.set(n[0], f[n[0]]);
+                        }
+                        if (f[n[1]] == 9) {
+                            self.temp_field.set(n[1], 11);
+                        } else {
+                            self.temp_field.set(n[1], f[n[1]]);
+                        }
+                        if (f[n[2]] == 9) {
+                            self.temp_field.set(n[2], 11);
+                        } else {
+                            self.temp_field.set(n[2], f[n[2]]);
+                        }
+                        if (f[n[3]] == 9) {
+                            self.temp_field.set(n[3], 11);
+                        } else {
+                            self.temp_field.set(n[3], f[n[3]]);
+                        }
+                        if (f[n[4]] == 9) {
+                            self.temp_field.set(n[4], 11);
+                        } else {
+                            self.temp_field.set(n[4], f[n[4]]);
+                        }
+                    },
+                    3 => {
+                        if (f[n[0]] == 9) {
+                            self.temp_field.set(n[0], 11);
+                        } else {
+                            self.temp_field.set(n[0], f[n[0]]);
+                        }
+                        if (f[n[1]] == 9) {
+                            self.temp_field.set(n[1], 11);
+                        } else {
+                            self.temp_field.set(n[1], f[n[1]]);
+                        }
+                        if (f[n[2]] == 9) {
+                            self.temp_field.set(n[2], 11);
+                        } else {
+                            self.temp_field.set(n[2], f[n[2]]);
+                        }
+                    },
+                    else => {
+                        unreachable;
+                    },
                 }
                 self.temp_field.set(i, gameval);
             } else if (self.temp_field.at(i) != 11) {
@@ -224,27 +325,62 @@ pub const Probs = struct {
     }
     fn set_safe_and_number_cells(self: *Probs) !void {
         var flag_count: u16 = 0;
+        const f = self.game_field.array;
         var i: usize = 0;
         while (i < self.field_size) : (i += 1) {
             const gameval = self.game_field.at(i);
             if (gameval < 9) {
                 const neighbors = self.get_neis(@truncate(i));
+                const n = neighbors.cells;
                 var flags_count: u8 = 0;
-                var j: usize = 0;
-                while (j < neighbors.size) : (j += 1) {
-                    if (self.game_field.at(neighbors.at(j)) == 11) {
-                        flags_count += 1;
-                    }
-                }
-                if (gameval == flags_count) {
-                    j = 0;
-                    while (j < neighbors.size) : (j += 1) {
-                        if (self.game_field.at(neighbors.at(j)) == 9) {
-                            self.temp_field.set(neighbors.at(j), 27);
+                switch (neighbors.size) {
+                    8 => {
+                        @branchHint(.likely);
+                        flags_count = @as(u8, @intFromBool(f[n[0]] == 11)) + @as(u8, @intFromBool(f[n[1]] == 11)) +
+                            @as(u8, @intFromBool(f[n[2]] == 11)) + @as(u8, @intFromBool(f[n[3]] == 11)) +
+                            @as(u8, @intFromBool(f[n[4]] == 11)) + @as(u8, @intFromBool(f[n[5]] == 11)) +
+                            @as(u8, @intFromBool(f[n[6]] == 11)) + @as(u8, @intFromBool(f[n[7]] == 11));
+                        if (gameval == flags_count) {
+                            if (f[n[0]] == 9) self.temp_field.set(n[0], 27);
+                            if (f[n[1]] == 9) self.temp_field.set(n[1], 27);
+                            if (f[n[2]] == 9) self.temp_field.set(n[2], 27);
+                            if (f[n[3]] == 9) self.temp_field.set(n[3], 27);
+                            if (f[n[4]] == 9) self.temp_field.set(n[4], 27);
+                            if (f[n[5]] == 9) self.temp_field.set(n[5], 27);
+                            if (f[n[6]] == 9) self.temp_field.set(n[6], 27);
+                            if (f[n[7]] == 9) self.temp_field.set(n[7], 27);
+                        } else {
+                            try self.num_cells_list.add(stl.vec.pair16_8{ .first = @truncate(i), .second = (gameval - flags_count) });
                         }
-                    }
-                } else {
-                    try self.num_cells_list.add(stl.vec.pair16_8{ .first = @truncate(i), .second = (gameval - flags_count) });
+                    },
+                    5 => {
+                        flags_count = @as(u8, @intFromBool(f[n[0]] == 11)) + @as(u8, @intFromBool(f[n[1]] == 11)) +
+                            @as(u8, @intFromBool(f[n[2]] == 11)) + @as(u8, @intFromBool(f[n[3]] == 11)) +
+                            @as(u8, @intFromBool(f[n[4]] == 11));
+                        if (gameval == flags_count) {
+                            if (f[n[0]] == 9) self.temp_field.set(n[0], 27);
+                            if (f[n[1]] == 9) self.temp_field.set(n[1], 27);
+                            if (f[n[2]] == 9) self.temp_field.set(n[2], 27);
+                            if (f[n[3]] == 9) self.temp_field.set(n[3], 27);
+                            if (f[n[4]] == 9) self.temp_field.set(n[4], 27);
+                        } else {
+                            try self.num_cells_list.add(stl.vec.pair16_8{ .first = @truncate(i), .second = (gameval - flags_count) });
+                        }
+                    },
+                    3 => {
+                        flags_count = @as(u8, @intFromBool(f[n[0]] == 11)) + @as(u8, @intFromBool(f[n[1]] == 11)) +
+                            @as(u8, @intFromBool(f[n[2]] == 11));
+                        if (gameval == flags_count) {
+                            if (f[n[0]] == 9) self.temp_field.set(n[0], 27);
+                            if (f[n[1]] == 9) self.temp_field.set(n[1], 27);
+                            if (f[n[2]] == 9) self.temp_field.set(n[2], 27);
+                        } else {
+                            try self.num_cells_list.add(stl.vec.pair16_8{ .first = @truncate(i), .second = (gameval - flags_count) });
+                        }
+                    },
+                    else => {
+                        unreachable;
+                    },
                 }
             } else if (gameval == 11) {
                 flag_count += 1;
@@ -265,8 +401,12 @@ pub const Probs = struct {
     }
     fn check_if_27(self: *Probs) bool {
         var i: usize = 0;
-        while (i < self.real_size) : (i += 1) {
-            if (self.game_field.at(i) == 27) {
+        const p27: @Vector(16, u8) = @splat(27);
+        while (i < self.real_size) : (i += 16) {
+            const data: @Vector(16, u8) = self.game_field.array[i..][0..16].*;
+            const eq = data == p27;
+            const mask: u16 = @bitCast(eq);
+            if (mask > 0) {
                 return true;
             }
         }
@@ -1117,7 +1257,7 @@ pub const Probs = struct {
         }
 
         var occurrences_map = try stl.map.mapvec64.new(self.edge_cells_count + 1);
-        // defer occurrences_map.free();
+        defer occurrences_map.free();
         try self.create_occurrences_map(&group_maps, &occurrences_map);
 
         if (occurrences_map.empty()) {
