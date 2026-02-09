@@ -143,7 +143,7 @@ pub const Probs = struct {
     neis_cache: *stl.vec.vecneis,
     popcnts: [1 << LIMIT_BRUTE_FORCE]u8,
 
-    pub fn init(w: u8, h: u8, m: u8, cache: *stl.vec.vecneis) !Probs {
+    pub fn init(w: u8, h: u8, m: u16, cache: *stl.vec.vecneis) !Probs {
         var prob = Probs{
             .total_mines = m,
             .field_width = w,

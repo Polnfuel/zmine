@@ -16,7 +16,7 @@ pub const Engine = struct {
     playing: bool,
     won: bool,
 
-    pub fn init(w: u8, h: u8, m: u8) !Engine {
+    pub fn init(w: u8, h: u8, m: u16) !Engine {
         var eng = Engine{
             .field_size = @as(u16, w) * h,
             .field_height = h,

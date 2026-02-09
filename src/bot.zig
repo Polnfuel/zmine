@@ -6,11 +6,16 @@ const A = error{
     ProbsError,
 };
 
+var print_field: *const fn (*std.io.Writer, stl.vec.vec8, u8) std.io.Writer.Error!void = undefined;
+var buffer: *std.io.Writer = undefined;
+
 pub const Bot = struct {
     suggests: stl.vec.dvec16,
     prob: probs.Probs,
 
-    pub fn init(w: u8, h: u8, m: u8, cache: *stl.vec.vecneis) !Bot {
+    pub fn init(w: u8, h: u8, m: u16, cache: *stl.vec.vecneis, print_func: *const fn (*std.io.Writer, stl.vec.vec8, u8) std.io.Writer.Error!void, stdout: *std.io.Writer) !Bot {
+        print_field = print_func;
+        buffer = stdout;
         const bot = Bot{
             .suggests = try stl.vec.dvec16.new(10),
             .prob = try probs.Probs.init(w, h, m, cache),
@@ -27,6 +32,7 @@ pub const Bot = struct {
             // return self.suggests;
             return A.ProbsError;
         }
+        try print_field(buffer, prob_field, self.prob.field_width);
 
         const p27: @Vector(16, u8) = @splat(27);
         var i: u16 = 0;
