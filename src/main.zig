@@ -20,23 +20,36 @@ fn sleeptime(seconds: f32) void {
 }
 
 fn print_starting_screen(buffer: *std.io.Writer) !void {
-    try buffer.print("\x1b[2J", .{});
+    _ = try buffer.write("\x1b[2J");
     try buffer.print("\x1b[1;{}HConsole size: ({}x{})", .{ third - 10, win_width, win_heigth });
     try buffer.print("\x1b[4;{}H\x1b[1m\x1b[37mMINESWEEPER\x1b[5;{}HGAME\x1b[m\x1b[7;{}H(enter)", .{ third - 5, third - 2, third - 4 });
     try buffer.flush();
 }
 
-fn print_stat(buffer: *std.io.Writer, att: i32, attall: i32, suc: i32, row: i32, maxrow: i32) !void {
-    try buffer.print("\x1b[0m", .{});
+fn print_in_game_stat(buffer: *std.io.Writer, att: i32, attall: i32, suc: i32, row: i32, maxrow: i32) !void {
+    var winrate = @as(f32, @as(f32, @floatFromInt(suc)) / @as(f32, @floatFromInt(att)) * 100.0);
+    if (std.math.isNan(winrate)) {
+        winrate = 0.0;
+    }
+    _ = try buffer.write("\x1b[0m");
     try buffer.print("\x1b[3;{}H  Game #{}/{}", .{ stat_woffset, att + 1, attall });
-    try buffer.print("\x1b[4;{}H    Row {}/max row {}", .{ stat_woffset, row, maxrow });
-    try buffer.print("\x1b[5;{}HWinrate {}/{}({:.2}%)", .{ stat_woffset, suc, att, @as(f32, @as(f32, @floatFromInt(suc)) / @as(f32, @floatFromInt(att)) * 100.0) });
+    try buffer.print("\x1b[4;{}H   Row: {} (max: {})", .{ stat_woffset, row, maxrow });
+    try buffer.print("\x1b[5;{}HWinrate {}/{}({:.2}%)", .{ stat_woffset, suc, att, winrate });
+    try buffer.print("\x1b[{};{}H", .{ prms.h + 4, @divFloor(win_width, 4) - 3 });
+    try buffer.flush();
+}
+
+fn print_post_game_stat(buffer: *std.io.Writer, att: i32, attall: i32, suc: i32, row: i32, maxrow: i32) !void {
+    _ = try buffer.write("\x1b[0m");
+    try buffer.print("\x1b[3;{}H  Game #{}/{}", .{ stat_woffset, att + 1, attall });
+    try buffer.print("\x1b[4;{}H   Row: {} (max: {})", .{ stat_woffset, row, maxrow });
+    try buffer.print("\x1b[5;{}HWinrate {}/{}({:.2}%)", .{ stat_woffset, suc, att + 1, @as(f32, @as(f32, @floatFromInt(suc)) / @as(f32, @floatFromInt(att + 1)) * 100.0) });
     try buffer.print("\x1b[{};{}H", .{ prms.h + 4, @divFloor(win_width, 4) - 3 });
     try buffer.flush();
 }
 
 fn print_field(buffer: *std.io.Writer, game_field: zigmine.stl.vec.vec8, w: u8) !void {
-    try buffer.print("\x1b[2H\x1b[0J", .{});
+    _ = try buffer.write("\x1b[2H\x1b[0J");
     const h = @divFloor(game_field.array.len, w);
     var i: usize = 0;
     while (i < h) : (i += 1) {
@@ -104,6 +117,24 @@ fn print_field(buffer: *std.io.Writer, game_field: zigmine.stl.vec.vec8, w: u8) 
     try buffer.flush();
 }
 
+fn clear_stdin(buffer: *std.io.Reader) !void {
+    var c = try buffer.takeByte();
+    while (c != '\n') {
+        c = try buffer.takeByte();
+    }
+}
+
+fn to_quit(buffer: *std.io.Reader) !bool {
+    const c = try buffer.takeByte();
+    if (c != '\n') {
+        try clear_stdin(buffer);
+    }
+    if (c == 'q') {
+        return true;
+    }
+    return false;
+}
+
 pub fn main() !void {
     const allocator = std.heap.c_allocator;
     zigmine.stl.set_alloc(allocator);
@@ -122,7 +153,7 @@ pub fn main() !void {
     win_heigth = buf.row;
     third = @divFloor(win_width, 3);
 
-    prms = zigmine.FieldParams{ .w = 30, .h = 16, .m = 99 };
+    prms = zigmine.FieldParams{ .w = 80, .h = 30, .m = 550 };
     var eng = try zigmine.eng.Engine.init(prms.w, prms.h, prms.m);
     defer eng.deinit();
 
@@ -133,18 +164,19 @@ pub fn main() !void {
     if (fld_woffset < 2) fld_woffset = 2;
     stat_woffset = fld_woffset + 2 * prms.w + 6;
 
-    const attempt_count: u32 = 1000;
+    const attempt_count: u32 = 50;
     var succesful: u32 = 0;
     var queries: u32 = 0;
     var max_row: u32 = 0;
     var row: u32 = 0;
 
     try print_starting_screen(stdout);
-    _ = try stdin.takeByte();
+    if (try to_quit(stdin)) {
+        _ = try stdout.write("\x1b[2\x1b[H");
+        return;
+    }
     try stdout.print("\x1b[1H\x1b[K\x1b[1;{}Hwidth: {}  height: {}  mines: {}\x1b[K", .{ fld_woffset + prms.w - 15, prms.w, prms.h, prms.m });
     try stdout.flush();
-
-    // const start = try std.time.Instant.now();
 
     var attempt: u32 = 0;
     while (attempt < attempt_count) : (attempt += 1) {
@@ -160,8 +192,8 @@ pub fn main() !void {
             }
             queries += 1;
 
-            try print_stat(stdout, @intCast(attempt), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
-            sleeptime(0.2);
+            try print_in_game_stat(stdout, @intCast(attempt), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
+            sleeptime(0.15);
         }
         if (eng.won) {
             succesful += 1;
@@ -172,21 +204,20 @@ pub fn main() !void {
         if (row > max_row) {
             max_row = row;
         }
-        try print_field(stdout, eng.visible_field, eng.field_width);
-        try print_stat(stdout, @intCast(attempt + 1), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
-        try stdout.print("\x1b[0m(next)", .{});
-        try stdout.flush();
-        _ = try stdin.takeByte();
-    }
 
-    // const end = try std.time.Instant.now();
-    // const micros = end.since(start) / 1000;
+        try print_field(stdout, eng.visible_field, eng.field_width);
+        try print_post_game_stat(stdout, @intCast(attempt + 1), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
+        _ = try stdout.write("\x1b[0m(next)");
+        try stdout.flush();
+        if (try to_quit(stdin)) {
+            break;
+        }
+    }
 
     const suc: f32 = @floatFromInt(succesful * 100);
     const percent = (suc / @as(f32, attempt_count));
-    try stdout.print("\n{d} sucess ({d}/{d})\n", .{ percent, succesful, attempt_count });
+    try stdout.print("\n{d} success ({d}/{d})\n", .{ percent, succesful, attempt_count });
     try stdout.print("{d} queries to probs()\n", .{queries});
     try stdout.print("{d} maximum row\n", .{max_row});
-    // try stdout.print("{d} micros\n", .{micros});
     try stdout.flush();
 }
