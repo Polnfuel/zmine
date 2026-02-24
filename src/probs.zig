@@ -141,7 +141,7 @@ var num_table: NumTable = undefined;
 var neis_cache: *vec.vecneis = undefined;
 var popcnts: [1 << LIMIT_BRUTE_FORCE]u8 = undefined;
 
-pub fn init(w: u8, h: u8, m: u8, cache: *vec.vecneis) !void {
+pub fn init(w: u8, h: u8, m: u16, cache: *vec.vecneis) !void {
     total_mines = m;
     field_width = w;
     field_height = h;

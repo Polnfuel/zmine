@@ -15,7 +15,7 @@ pub var real_size: u16 = undefined;
 pub var playing: bool = undefined;
 pub var won: bool = undefined;
 
-pub fn init(w: u8, h: u8, m: u8) !void {
+pub fn init(w: u8, h: u8, m: u16) !void {
     field_size = @as(u16, w) * h;
     field_height = h;
     field_width = w;

@@ -8,7 +8,7 @@ const A = error{
 
 var suggests: stl.vec.dvec16 = undefined;
 
-pub fn init(w: u8, h: u8, m: u8, cache: *stl.vec.vecneis) !void {
+pub fn init(w: u8, h: u8, m: u16, cache: *stl.vec.vecneis) !void {
     suggests = try stl.vec.dvec16.new(10);
     try Probs.init(w, h, m, cache);
 }
