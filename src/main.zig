@@ -1,12 +1,20 @@
 const std = @import("std");
-const zigmine = @import("zigmine");
+const stl = @import("stl");
+const Engine = @import("engine");
+const Bot = @import("bot");
+
+const FieldParams = struct {
+    w: u8,
+    h: u8,
+    m: u16,
+};
 
 var win_width: i32 = undefined;
 var win_heigth: i32 = undefined;
 var third: i32 = undefined;
 var fld_woffset: i32 = undefined;
 var stat_woffset: i32 = undefined;
-var prms: zigmine.FieldParams = undefined;
+var prms: FieldParams = undefined;
 
 fn sleeptime(seconds: f32) void {
     const sec = @floor(seconds);
@@ -48,7 +56,7 @@ fn print_post_game_stat(buffer: *std.io.Writer, att: i32, attall: i32, suc: i32,
     try buffer.flush();
 }
 
-fn print_field(buffer: *std.io.Writer, game_field: zigmine.stl.vec.vec8, w: u8) !void {
+fn print_field(buffer: *std.io.Writer, game_field: stl.vec.vec8, w: u8) !void {
     _ = try buffer.write("\x1b[2H\x1b[0J");
     const h = @divFloor(game_field.array.len, w);
     var i: usize = 0;
@@ -136,8 +144,8 @@ fn to_quit(buffer: *std.io.Reader) !bool {
 }
 
 pub fn main() !void {
-    const allocator = std.heap.c_allocator;
-    zigmine.stl.set_alloc(allocator);
+    const allocator = std.heap.smp_allocator;
+    stl.set_alloc(allocator);
 
     var stdout_buffer: [2048]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
@@ -153,12 +161,12 @@ pub fn main() !void {
     win_heigth = buf.row;
     third = @divFloor(win_width, 3);
 
-    prms = zigmine.FieldParams{ .w = 80, .h = 30, .m = 550 };
-    var eng = try zigmine.eng.Engine.init(prms.w, prms.h, prms.m);
-    defer eng.deinit();
+    prms = FieldParams{ .w = 80, .h = 30, .m = 550 };
+    try Engine.init(prms.w, prms.h, prms.m);
+    defer Engine.deinit();
 
-    var bot = try zigmine.bot.Bot.init(prms.w, prms.h, prms.m, zigmine.eng.Engine.get_cache_ptr(), print_field, stdout);
-    defer bot.deinit();
+    try Bot.init(prms.w, prms.h, prms.m, Engine.get_cache_ptr(), print_field, stdout);
+    defer Bot.deinit();
 
     fld_woffset = @divFloor(win_width, 4) - prms.w;
     if (fld_woffset < 2) fld_woffset = 2;
@@ -178,24 +186,21 @@ pub fn main() !void {
     try stdout.print("\x1b[1H\x1b[K\x1b[1;{}Hwidth: {}  height: {}  mines: {}\x1b[K", .{ fld_woffset + prms.w - 15, prms.w, prms.h, prms.m });
     try stdout.flush();
 
-    var attempt: u32 = 0;
-    while (attempt < attempt_count) : (attempt += 1) {
-        try eng.start_game(0);
+    for (0..attempt_count) |attempt| {
+        try Engine.start_game(0);
 
-        while (eng.playing) {
-            const to_click = try bot.clicks(eng.visible_field);
+        while (Engine.playing) {
+            const to_click = try Bot.clicks(Engine.visible_field);
 
-            var i: u16 = 0;
-            while (i < to_click.size) : (i += 1) {
-                const to = to_click.at(i);
-                try eng.open_cell(to);
+            for (to_click.array[0..to_click.size]) |to| {
+                try Engine.open_cell(@truncate(to));
             }
             queries += 1;
 
             try print_in_game_stat(stdout, @intCast(attempt), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
             sleeptime(0.15);
         }
-        if (eng.won) {
+        if (Engine.won) {
             succesful += 1;
             row += 1;
         } else {
@@ -205,7 +210,7 @@ pub fn main() !void {
             max_row = row;
         }
 
-        try print_field(stdout, eng.visible_field, eng.field_width);
+        try print_field(stdout, Engine.visible_field, prms.w);
         try print_post_game_stat(stdout, @intCast(attempt + 1), attempt_count, @intCast(succesful), @intCast(row), @intCast(max_row));
         _ = try stdout.write("\x1b[0m(next)");
         try stdout.flush();

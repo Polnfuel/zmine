@@ -243,9 +243,8 @@ pub const dvec16 = struct {
     }
 
     pub fn has(self: dvec16, value: u16) bool {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -253,9 +252,8 @@ pub const dvec16 = struct {
     }
 
     pub fn index_of(self: dvec16, value: u16) usize {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size], 0..self.size) |elem, i| {
+            if (elem == value) {
                 return i;
             }
         }
@@ -298,8 +296,8 @@ pub const dvec64 = struct {
     }
 
     pub fn has(self: dvec64, value: u64) bool {
-        for (self.array, 0..self.size) |_, i| {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -334,8 +332,8 @@ pub const dvec128 = struct {
     }
 
     pub fn has(self: dvec128, value: u128) bool {
-        for (self.array, 0..self.size) |_, i| {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -464,9 +462,7 @@ pub const dvecpairdvec16_dvecpair16_8 = struct {
     }
 
     pub fn free(self: *dvecpairdvec16_dvecpair16_8) void {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            const pair = self.array[i];
+        for (self.array[0..self.size]) |pair| {
             allocator.free(pair.first.array);
             allocator.free(pair.second.array);
         }

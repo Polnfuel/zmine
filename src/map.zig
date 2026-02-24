@@ -12,9 +12,8 @@ pub const miniset16 = struct {
     size: u8,
 
     pub fn has(self: *miniset16, value: u16) bool {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.data[i] == value) {
+        for (self.data[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -51,9 +50,8 @@ pub const mapvec64 = struct {
     }
 
     pub fn empty(self: mapvec64) bool {
-        var i: usize = 0;
-        while (i < self.array.len) : (i += 1) {
-            if (self.array[i] != null) {
+        for (self.array) |v| {
+            if (v != null) {
                 return false;
             }
         }
@@ -69,22 +67,18 @@ pub const mapvec64 = struct {
     }
 
     pub fn first(self: mapvec64) u8 {
-        var i: usize = 0;
-        while (i < self.array.len) : (i += 1) {
-            if (self.array[i] != null) {
+        for (self.array, 0..self.array.len) |v, i| {
+            if (v) |_| {
                 return @truncate(i);
             }
         }
         unreachable;
     }
 
-    pub fn free(self: *mapvec64) void {
-        var i: usize = 0;
-        while (i < self.array.len) : (i += 1) {
-            const p = self.array[i];
-            if (p != null) {
-                const pp = p.?;
-                allocator.free(pp.array);
+    pub fn free(self: *const mapvec64) void {
+        for (self.array) |opt_v| {
+            if (opt_v) |v| {
+                allocator.free(v.array);
             }
         }
         allocator.free(self.array);
@@ -129,9 +123,7 @@ pub const vecmapvec64 = struct {
     }
 
     pub fn free(self: *vecmapvec64) void {
-        var i: usize = 0;
-        while (i < self.array.len) : (i += 1) {
-            var map = self.array[i];
+        for (self.array) |map| {
             map.free();
         }
 
@@ -176,9 +168,8 @@ pub const set16 = struct {
     }
 
     pub fn has(self: set16, value: u16) bool {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -198,10 +189,6 @@ pub const set64 = struct {
         const arr = try allocator.alloc(u64, init_cap);
         return set64{ .array = arr, .size = 0 };
     }
-
-    // pub fn at(self: set64, index: usize) u64 {
-    //     return self.array[index];
-    // }
 
     fn realloc(self: *set64, new_size: usize) !void {
         const new_arr: []u64 = try allocator.realloc(self.array, new_size);
@@ -227,9 +214,8 @@ pub const set64 = struct {
     }
 
     pub fn has(self: set64, value: u64) bool {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -249,10 +235,6 @@ pub const set128 = struct {
         const arr = try allocator.alloc(u128, init_cap);
         return set128{ .array = arr, .size = 0 };
     }
-
-    // pub fn at(self: set128, index: usize) u128 {
-    //     return self.array[index];
-    // }
 
     fn realloc(self: *set128, new_size: usize) !void {
         const new_arr: []u128 = try allocator.realloc(self.array, new_size);
@@ -278,9 +260,8 @@ pub const set128 = struct {
     }
 
     pub fn has(self: set128, value: u128) bool {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            if (self.array[i] == value) {
+        for (self.array[0..self.size]) |elem| {
+            if (elem == value) {
                 return true;
             }
         }
@@ -291,24 +272,3 @@ pub const set128 = struct {
         allocator.free(self.array);
     }
 };
-
-// test "set16testing" {
-//     allocator = std.testing.allocator;
-//     var set = try set128.new(10);
-//     defer set.free();
-//     try set.ins(0);
-//     try set.ins(20);
-//     try set.ins(10);
-//     try set.ins(5);
-//     try set.ins(5);
-//     try set.ins(0);
-//     try set.ins(1);
-//     try set.ins(30);
-
-//     try std.testing.expect(set.at(0) == 0);
-//     try std.testing.expect(set.at(1) == 1);
-//     try std.testing.expect(set.at(2) == 5);
-//     try std.testing.expect(set.at(3) == 10);
-//     try std.testing.expect(set.at(4) == 20);
-//     try std.testing.expect(set.at(5) == 30);
-// }
