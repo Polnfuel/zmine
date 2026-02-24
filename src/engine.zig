@@ -43,7 +43,7 @@ pub const Engine = struct {
         try self.open_cell(first_click);
     }
 
-    noinline fn set_indices(self: *Engine) void {
+    fn set_indices(self: *Engine) void {
         var i: u16 = 0;
         while (i < self.real_size) : (i += 8) {
             const a = [8]u16{ i + 7, i + 6, i + 5, i + 4, i + 3, i + 2, i + 1, i };
