@@ -1,7 +1,7 @@
 const std = @import("std");
 const stl = @import("stl");
-const Engine = @import("engine").Engine;
-const Bot = @import("bot").Bot;
+const Engine = @import("engine");
+const Bot = @import("bot");
 
 const FieldParams = struct {
     w: u8,
@@ -18,11 +18,11 @@ pub fn main() !void {
     const stdout = &stdout_writer.interface;
 
     const prms = FieldParams{ .w = 30, .h = 16, .m = 99 };
-    var eng = try Engine.init(prms.w, prms.h, prms.m);
-    defer eng.deinit();
+    try Engine.init(prms.w, prms.h, prms.m);
+    defer Engine.deinit();
 
-    var bot = try Bot.init(prms.w, prms.h, prms.m, Engine.get_cache_ptr());
-    defer bot.deinit();
+    try Bot.init(prms.w, prms.h, prms.m, Engine.get_cache_ptr());
+    defer Bot.deinit();
 
     const file = try std.fs.cwd().openFile("flds", .{ .mode = .read_only });
     defer file.close();
@@ -43,19 +43,19 @@ pub fn main() !void {
 
     var attempt: u32 = 0;
     while (attempt < attempt_count) : (attempt += 1) {
-        try eng.start_game(0, file_buffer[attempt * eng.real_size .. attempt * eng.real_size + 480]);
+        try Engine.start_game(0, file_buffer[attempt * Engine.real_size .. attempt * Engine.real_size + 480]);
 
-        while (eng.playing) {
-            const to_click = try bot.clicks(eng.visible_field);
+        while (Engine.playing) {
+            const to_click = try Bot.clicks(Engine.visible_field);
 
             var i: u16 = 0;
             while (i < to_click.size) : (i += 1) {
                 const to = to_click.at(i);
-                try eng.open_cell(to);
+                try Engine.open_cell(to);
             }
             queries += 1;
         }
-        if (eng.won) {
+        if (Engine.won) {
             succesful += 1;
             row += 1;
         } else {
@@ -64,7 +64,6 @@ pub fn main() !void {
         if (row > max_row) {
             max_row = row;
         }
-        // try eng.print_field();
     }
 
     const end = try std.time.Instant.now();
