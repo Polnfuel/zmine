@@ -50,8 +50,8 @@ fn set_indices() void {
 fn set_neis_cache() !void {
     neis_cache = try stl.vec.vecneis.new(field_size);
     const fw = field_width;
-    var c: u16 = 0;
-    while (c < field_size) : (c += 1) {
+    for (0..field_size) |cc| {
+        const c: u16 = @intCast(cc);
         const row = c / fw;
         const col = c % fw;
 
@@ -137,8 +137,8 @@ fn gen_field(field_start: []u8) void {
 
 fn check_end() bool {
     var count: u16 = 0;
-    var i: usize = 0;
     const nine: @Vector(16, u8) = @splat(9);
+    var i: usize = 0;
     while (i < real_size) : (i += 16) {
         const data: @Vector(16, u8) = visible_field.array[i..][0..16].*;
         const cmp = data < nine;
@@ -158,12 +158,9 @@ fn open_zero(cell: u16) !void {
     try edge_cells.add(cell);
 
     while (true) {
-        var i = neis_checked;
-        while (i < zero_cells.size) : (i += 1) {
+        for (neis_checked..zero_cells.size) |i| {
             const neighbors = get_neis(zero_cells.at(i));
-            var j: usize = 0;
-            while (j < neighbors.size) : (j += 1) {
-                const nei = neighbors.at(j);
+            for (neighbors.cells[0..neighbors.size]) |nei| {
                 if (game_field.at(nei) == 0 and !zero_cells.has(nei)) {
                     try zero_cells.add(nei);
                 }
@@ -179,9 +176,7 @@ fn open_zero(cell: u16) !void {
         }
     }
 
-    var i: usize = 0;
-    while (i < edge_cells.size) : (i += 1) {
-        const to = edge_cells.at(i);
+    for (edge_cells.array[0..edge_cells.size]) |to| {
         visible_field.set(to, game_field.at(to));
     }
 }

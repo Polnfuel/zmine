@@ -71,18 +71,16 @@ const NumTable = struct {
     }
 
     pub fn set_combs64(self: *NumTable, num: u16, combs: vec.dvec64) void {
-        const c = self.table[num].combs;
-        if (c != null) {
-            const cc: vec.dvec64 = c.?.get_as_u64();
+        if (self.table[num].combs) |c| {
+            const cc: vec.dvec64 = c.get_as_u64();
             vec.allocator.free(cc.array);
         }
         self.table[num].combs = vector.put_as_u64(&combs);
     }
 
     pub fn set_combs128(self: *NumTable, num: u16, combs: vec.dvec128) void {
-        const c = self.table[num].combs;
-        if (c != null) {
-            const cc: vec.dvec64 = c.?.get_as_u64();
+        if (self.table[num].combs) |c| {
+            const cc: vec.dvec64 = c.get_as_u64();
             vec.allocator.free(cc.array);
         }
         self.table[num].combs = vector.put_as_u128(&combs);
@@ -114,11 +112,10 @@ const NumTable = struct {
     }
 
     pub fn deinit(self: *NumTable) void {
-        var i: usize = 0;
-        while (i < self.size) : (i += 1) {
-            const c = self.table[i].combs;
-            if (c != null) {
-                const cc = c.?.get_as_u64();
+        for (self.table[0..self.size]) |*info| {
+            const v = info.combs;
+            if (v) |c| {
+                const cc = c.get_as_u64();
                 vec.allocator.free(cc.array);
             }
         }
@@ -176,9 +173,8 @@ pub fn deinit() void {
 
 fn fillpopcnts() void {
     popcnts[0] = 0;
-    var i: usize = 0;
     const limit = 1 << LIMIT_BRUTE_FORCE;
-    while (i < limit) : (i += 1) {
+    for (0..limit) |i| {
         const last: u8 = @truncate(i);
         popcnts[i] = (last & 1) + popcnts[i >> 1];
     }
@@ -191,9 +187,7 @@ fn get_neis(c: u16) vec.neis {
 fn set_flags_and_float_cells() !void {
     temp_field.fill(26);
     const f = game_field.array;
-    var i: usize = 0;
-    while (i < field_size) : (i += 1) {
-        const gameval = game_field.at(i);
+    for (game_field.array[0..field_size], 0..field_size) |gameval, i| {
         const neighbors = get_neis(@truncate(i));
         var closed_count: u8 = 0;
         const n = neighbors.cells;
@@ -326,9 +320,7 @@ fn set_flags_and_float_cells() !void {
 fn set_safe_and_number_cells() !void {
     var flag_count: u16 = 0;
     const f = game_field.array;
-    var i: usize = 0;
-    while (i < field_size) : (i += 1) {
-        const gameval = game_field.at(i);
+    for (game_field.array[0..field_size], 0..field_size) |gameval, i| {
         if (gameval < 9) {
             const neighbors = get_neis(@truncate(i));
             const n = neighbors.cells;
@@ -391,11 +383,9 @@ fn set_safe_and_number_cells() !void {
 }
 
 fn set_edge_cells() !void {
-    var i: u16 = 0;
-    while (i < field_size) : (i += 1) {
-        const gval = game_field.at(i);
+    for (game_field.array[0..field_size], 0..field_size) |gval, i| {
         if (gval == 9) {
-            try edge_cells_list.add(i);
+            try edge_cells_list.add(@truncate(i));
         }
     }
     edge_cells_count = @truncate(edge_cells_list.size);
@@ -430,22 +420,19 @@ fn get_cell_groups(groups: *vec.dvecpairdvec16_dvecpair16_8) !void {
         var first_cell = edge_cells_list.at(0);
 
         if (groups.size != 0) {
-            var i: usize = 0;
-            while (i < edge_cells_count) : (i += 1) {
+            for (edge_cells_list.array[0..edge_cells_count]) |edge_cell| {
                 var skip = false;
-                var g: usize = 0;
-                outer: while (g < groups.size) : (g += 1) {
-                    const groupsgfirst = groups.at(g).first;
-                    var edgecell: usize = 0;
-                    while (edgecell < groupsgfirst.size) : (edgecell += 1) {
-                        if (groupsgfirst.at(edgecell) == edge_cells_list.at(i)) {
+                outer: for (groups.array[0..groups.size]) |group| {
+                    const group_edges = group.first;
+                    for (group_edges.array[0..group_edges.size]) |group_edge| {
+                        if (group_edge == edge_cell) {
                             skip = true;
                             break :outer;
                         }
                     }
                 }
                 if (!skip) {
-                    first_cell = edge_cells_list.at(i);
+                    first_cell = edge_cell;
                     break;
                 }
             }
@@ -458,12 +445,10 @@ fn get_cell_groups(groups: *vec.dvecpairdvec16_dvecpair16_8) !void {
         try make_cell_group(&edge_cells, &num_cells);
 
         var num_cells_with_counts = try vec.dvecpair16_8.new(num_cells_list.size);
-        var n: usize = 0;
-        while (n < num_cells.size) : (n += 1) {
-            var num: usize = 0;
-            while (num < num_cells_list.size) : (num += 1) {
-                if (num_cells.at(n) == num_cells_list.at(num).first) {
-                    try num_cells_with_counts.ins(n, num_cells_list.at(num));
+        for (num_cells.array[0..num_cells.size], 0..num_cells.size) |num_cell, n| {
+            for (num_cells_list.array[0..num_cells_list.size]) |list_num_cell| {
+                if (num_cell == list_num_cell.first) {
+                    try num_cells_with_counts.ins(n, list_num_cell);
                     break;
                 }
             }
@@ -479,11 +464,9 @@ fn make_cell_group(edge_cells: *vec.dvec16, num_cells: *vec.dvec16) !void {
     var edges_checked: usize = 0;
     var nums_checked: usize = 0;
     while (true) {
-        var i: usize = edges_checked;
-        while (i < edge_cells.size) : (i += 1) {
+        for (edges_checked..edge_cells.size) |i| {
             const neighbors = get_neis(edge_cells.at(i));
-            var j: usize = 0;
-            while (j < neighbors.size) : (j += 1) {
+            for (0..neighbors.size) |j| {
                 const nei_index = neighbors.at(j);
                 if (game_field.at(nei_index) < 9 and !num_cells.has(nei_index)) {
                     try num_cells.add(nei_index);
@@ -492,11 +475,9 @@ fn make_cell_group(edge_cells: *vec.dvec16, num_cells: *vec.dvec16) !void {
             edges_checked += 1;
         }
 
-        i = nums_checked;
-        while (i < num_cells.size) : (i += 1) {
+        for (nums_checked..num_cells.size) |i| {
             const neighbors = get_neis(num_cells.at(i));
-            var j: usize = 0;
-            while (j < neighbors.size) : (j += 1) {
+            for (0..neighbors.size) |j| {
                 const nei_index = neighbors.at(j);
                 if (game_field.at(nei_index) == 9 and !edge_cells.has(nei_index)) {
                     try edge_cells.add(nei_index);
@@ -512,9 +493,8 @@ fn make_cell_group(edge_cells: *vec.dvec16, num_cells: *vec.dvec16) !void {
 }
 
 fn edge_index(edge: u16, edge_cells: [*]u16, edge_size: usize) u8 {
-    var i: usize = 0;
-    while (i < edge_size) : (i += 1) {
-        if (edge_cells[i] == edge) {
+    for (edge_cells[0..edge_size], 0..edge_size) |elem, i| {
+        if (elem == edge) {
             return @truncate(i);
         }
     }
@@ -526,19 +506,16 @@ fn brute_force(edge_cells: *const vec.dvec16, num_cells: *const vec.dvecpair16_8
     var num_size = num_cells.size;
     var mapping: [LIMIT_BRUTE_FORCE]u8 = undefined;
 
-    var i: u8 = 0;
-    while (i < edge_size) : (i += 1) {
-        const cell = edge_cells.at(i);
+    for (edge_cells.array[0..edge_size], 0..edge_size) |cell, i| {
         mapping[i] = edge_index(cell, edge_cells_list.array.ptr, edge_cells_count);
     }
+
     var seen_masks: [2 * LIMIT_BRUTE_FORCE]u16 = undefined;
     var temp_size: usize = 0;
 
     var border_info: [2 * LIMIT_BRUTE_FORCE]vec.pair16_8 = undefined;
 
-    i = 0;
-    while (i < num_size) : (i += 1) {
-        const num = num_cells.at(i);
+    for (num_cells.array[0..num_size]) |num| {
         const num_index = num.first;
         const mine_count = num.second;
         const neighbors = get_neis(num_index);
@@ -573,9 +550,8 @@ fn brute_force(edge_cells: *const vec.dvec16, num_cells: *const vec.dvecpair16_8
         const mask: u16 = @truncate(mask0);
 
         var contains = false;
-        var s: usize = 0;
-        while (s < temp_size) : (s += 1) {
-            if (seen_masks[s] == mask) {
+        for (seen_masks[0..temp_size]) |s| {
+            if (s == mask) {
                 contains = true;
                 break;
             }
@@ -593,15 +569,12 @@ fn brute_force(edge_cells: *const vec.dvec16, num_cells: *const vec.dvecpair16_8
     var result: [5]vec.vec64 = undefined;
     var result_size: usize = 0;
 
-    const limit: u16 = (@as(u16, 1) << @as(u4, @truncate(edge_size))) - 1;
-    var mask: u16 = 0;
-    while (mask <= limit) : (mask += 1) {
+    const limit: u16 = (@as(u16, 1) << @as(u4, @truncate(edge_size)));
+    for (0..limit) |mask| {
         var valid = true;
         const bits = popcnts[mask];
-        i = 0;
-        while (i < num_size) : (i += 1) {
-            const mask_mines = border_info[i];
-            const overlap = mask & mask_mines.first;
+        for (border_info[0..num_size]) |mask_mines| {
+            const overlap = @as(u16, @truncate(mask)) & mask_mines.first;
             if (popcnts[overlap] != mask_mines.second) {
                 valid = false;
                 break;
@@ -616,7 +589,7 @@ fn brute_force(edge_cells: *const vec.dvec16, num_cells: *const vec.dvecpair16_8
             }
             const ind = count_to_index[bits];
             var c = result[ind];
-            var maskcpy = mask;
+            var maskcpy: u16 = @truncate(mask);
             while (maskcpy > 0) {
                 const t: u16 = @ctz(maskcpy);
                 maskcpy &= maskcpy - 1;
@@ -627,8 +600,7 @@ fn brute_force(edge_cells: *const vec.dvec16, num_cells: *const vec.dvecpair16_8
         }
     }
 
-    var bit_count: u8 = 0;
-    while (bit_count < LIMIT_BRUTE_FORCE) : (bit_count += 1) {
+    for (0..LIMIT_BRUTE_FORCE) |bit_count| {
         const index = count_to_index[bit_count];
         if (index != std.math.maxInt(u8)) {
             const val = result[index];
@@ -644,9 +616,7 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
     defer mapping.free();
     @memset(temp_field.array, std.math.maxInt(u8));
 
-    var i: usize = 0;
-    while (i < edge_size) : (i += 1) {
-        const cell = edge_cells.at(i);
+    for (edge_cells.array[0..edge_size], 0..edge_size) |cell, i| {
         const ind = std.sort.binarySearch(u16, edge_cells_list.array[0..edge_cells_list.size], cell, map.set16.u16Order).?;
         mapping.set(i, @truncate(ind));
         temp_field.set(cell, @truncate(i));
@@ -657,9 +627,7 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
     var num_set = try map.set16.new(num_size);
     defer num_set.free();
 
-    i = 0;
-    while (i < num_size) : (i += 1) {
-        const num = num_cells.at(i);
+    for (num_cells.array[0..num_size]) |num| {
         const cell_index = num.first;
         const mine_count = num.second;
         const neighbors = get_neis(cell_index);
@@ -705,15 +673,11 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
 
     var edges_neis = try vec.vecneis.new(edge_size);
     defer edges_neis.free();
-    i = 0;
-    while (i < edge_size) : (i += 1) {
-        const edge = edge_cells.at(i);
+    for (edge_cells.array[0..edge_size]) |edge| {
         const neighbors = get_neis(edge);
         var edge_neis: vec.neis = undefined;
         edge_neis.size = 0;
-        var j: usize = 0;
-        while (j < neighbors.size) : (j += 1) {
-            const nei = neighbors.at(j);
+        for (neighbors.cells[0..neighbors.size]) |nei| {
             if (num_set.has(nei)) {
                 edge_neis.add(nei);
             }
@@ -721,21 +685,15 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
         edges_neis.add(edge_neis);
     }
 
-    i = 0;
-    while (i < num_size) : (i += 1) {
-        const num = num_set.at(i);
+    for (num_set.array[0..num_size]) |num| {
         const num_neighbors = get_neis(num);
         var constraints: map.miniset16 = undefined;
         constraints.size = 0;
-        var j: usize = 0;
-        while (j < num_neighbors.size) : (j += 1) {
-            const nei = num_neighbors.at(j);
+        for (num_neighbors.cells[0..num_neighbors.size]) |nei| {
             const index = edge_cells.index_of(nei);
             if (index != std.math.maxInt(usize)) {
                 const edges = edges_neis.at(index);
-                var k: usize = 0;
-                while (k < edges.size) : (k += 1) {
-                    const edge = edges.at(k);
+                for (edges.cells[0..edges.size]) |edge| {
                     constraints.ins(edge);
                 }
             }
@@ -754,8 +712,7 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
     last_number = num_vec.at(num_size - 1);
     try mine_combinations64(num_vec.at(0), 0, &num_vec, &count_to_index, &result, &mapping);
 
-    var bit_count: usize = 0;
-    while (bit_count < edge_size) : (bit_count += 1) {
+    for (0..edge_size) |bit_count| {
         const index = count_to_index.at(bit_count);
         if (index != std.math.maxInt(u8)) {
             const val = result.at(index);
@@ -767,10 +724,9 @@ fn find_all_combinations64(edge_cells: *const vec.dvec16, num_cells: *const vec.
 fn bit_combs64(full_mask: u64, k: u8, result: *vec.dvec64) !void {
     var bit_pos: [64]u8 = undefined;
     var bit_size: usize = 0;
-    var i: u8 = 0;
-    while (i < 64) : (i += 1) {
+    for (0..64) |i| {
         if (full_mask & (@as(u64, 1) << @as(u6, @truncate(i))) > 0) {
-            bit_pos[bit_size] = i;
+            bit_pos[bit_size] = @truncate(i);
             bit_size += 1;
         }
     }
@@ -783,8 +739,7 @@ fn bit_combs64(full_mask: u64, k: u8, result: *vec.dvec64) !void {
 
     while (true) {
         var mask: u64 = 0;
-        var j: usize = 0;
-        while (j < total) : (j += 1) {
+        for (0..total) |j| {
             if (selection.at(j)) {
                 mask |= @as(u64, 1) << @as(u6, @truncate(bit_pos[j]));
             }
@@ -800,15 +755,11 @@ fn mine_combinations64(current_number: u16, mask: u64, num_set: *const vec.vec16
     const constraints = num_table.get_constraints(current_number);
     const combs = num_table.get_combs64(current_number);
 
-    var i: usize = 0;
-    while (i < combs.size) : (i += 1) {
-        const combo = combs.at(i);
+    for (combs.array[0..combs.size]) |combo| {
         const new_mask = mask | combo;
         var valid = true;
 
-        var j: usize = 0;
-        while (j < constraints.size) : (j += 1) {
-            const constraint = constraints.at(j);
+        for (constraints.data[0..constraints.size]) |constraint| {
             const mask_mine = num_table.get_mask_mines64(constraint);
             const constraint_mask = mask_mine.first;
             const mines = mask_mine.second;
@@ -859,9 +810,7 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
     defer mapping.free();
     @memset(temp_field.array, std.math.maxInt(u8));
 
-    var i: usize = 0;
-    while (i < edge_size) : (i += 1) {
-        const cell = edge_cells.at(i);
+    for (edge_cells.array[0..edge_size], 0..edge_size) |cell, i| {
         const ind = std.sort.binarySearch(u16, edge_cells_list.array[0..edge_cells_list.size], cell, map.set16.u16Order).?;
         mapping.set(i, @truncate(ind));
         temp_field.set(cell, @truncate(i));
@@ -872,17 +821,13 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
     var num_set = try map.set16.new(num_size);
     defer num_set.free();
 
-    i = 0;
-    while (i < num_size) : (i += 1) {
-        const num = num_cells.at(i);
+    for (num_cells.array[0..num_size]) |num| {
         const cell_index = num.first;
         const mine_count = num.second;
         const neighbors = get_neis(cell_index);
         var mask: u128 = 0;
 
-        var j: usize = 0;
-        while (j < neighbors.size) : (j += 1) {
-            const nei_index = neighbors.at(j);
+        for (neighbors.cells[0..neighbors.size]) |nei_index| {
             const val = cell_to_bit(nei_index);
             if (val != 127) {
                 mask |= (@as(u128, 1) << val);
@@ -902,15 +847,11 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
 
     var edges_neis = try vec.vecneis.new(edge_size);
     defer edges_neis.free();
-    i = 0;
-    while (i < edge_size) : (i += 1) {
-        const edge = edge_cells.at(i);
+    for (edge_cells.array[0..edge_size]) |edge| {
         const neighbors = get_neis(edge);
         var edge_neis: vec.neis = undefined;
         edge_neis.size = 0;
-        var j: usize = 0;
-        while (j < neighbors.size) : (j += 1) {
-            const nei = neighbors.at(j);
+        for (neighbors.cells[0..neighbors.size]) |nei| {
             if (num_set.has(nei)) {
                 edge_neis.add(nei);
             }
@@ -918,21 +859,15 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
         edges_neis.add(edge_neis);
     }
 
-    i = 0;
-    while (i < num_size) : (i += 1) {
-        const num = num_set.at(i);
+    for (num_set.array[0..num_size]) |num| {
         const num_neighbors = get_neis(num);
         var constraints: map.miniset16 = undefined;
         constraints.size = 0;
-        var j: usize = 0;
-        while (j < num_neighbors.size) : (j += 1) {
-            const nei = num_neighbors.at(j);
+        for (num_neighbors.cells[0..num_neighbors.size]) |nei| {
             const index = edge_cells.index_of(nei);
             if (index != std.math.maxInt(usize)) {
                 const edges = edges_neis.at(index);
-                var k: usize = 0;
-                while (k < edges.size) : (k += 1) {
-                    const edge = edges.at(k);
+                for (edges.cells[0..edges.size]) |edge| {
                     constraints.ins(edge);
                 }
             }
@@ -951,8 +886,7 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
     last_number = num_vec.at(num_size - 1);
     try mine_combinations128(num_vec.at(0), 0, &num_vec, &count_to_index, &result, &mapping);
 
-    var bit_count: usize = 0;
-    while (bit_count < edge_size) : (bit_count += 1) {
+    for (0..edge_size) |bit_count| {
         const index = count_to_index.at(bit_count);
         if (index != std.math.maxInt(u8)) {
             const val = result.at(index);
@@ -964,10 +898,9 @@ fn find_all_combinations128(edge_cells: *const vec.dvec16, num_cells: *const vec
 fn bit_combs128(full_mask: u128, k: u8, result: *vec.dvec128) !void {
     var bit_pos: [128]u8 = undefined;
     var bit_size: usize = 0;
-    var i: u8 = 0;
-    while (i < 128) : (i += 1) {
+    for (0..128) |i| {
         if (full_mask & (@as(u128, 1) << @as(u7, @truncate(i))) > 0) {
-            bit_pos[bit_size] = i;
+            bit_pos[bit_size] = @truncate(i);
             bit_size += 1;
         }
     }
@@ -980,8 +913,7 @@ fn bit_combs128(full_mask: u128, k: u8, result: *vec.dvec128) !void {
 
     while (true) {
         var mask: u128 = 0;
-        var j: usize = 0;
-        while (j < total) : (j += 1) {
+        for (0..total) |j| {
             if (selection.at(j)) {
                 mask |= @as(u128, 1) << @as(u7, @truncate(bit_pos[j]));
             }
@@ -997,15 +929,11 @@ fn mine_combinations128(current_number: u16, mask: u128, num_set: *const vec.vec
     const constraints = num_table.get_constraints(current_number);
     const combs = num_table.get_combs128(current_number);
 
-    var i: usize = 0;
-    while (i < combs.size) : (i += 1) {
-        const combo = combs.at(i);
+    for (combs.array[0..combs.size]) |combo| {
         const new_mask = mask | combo;
         var valid = true;
 
-        var j: usize = 0;
-        while (j < constraints.size) : (j += 1) {
-            const constraint = constraints.at(j);
+        for (constraints.data[0..constraints.size]) |constraint| {
             const mask_mine = num_table.get_mask_mines128(constraint);
             const constraint_mask = mask_mine.first;
             const mines = mask_mine.second;
@@ -1073,8 +1001,7 @@ fn backtrack_occurrences(index: usize, mines: u16, group_maps: *map.vecmapvec64,
             return;
         }
         var factor: u64 = 1;
-        var group: usize = 0;
-        while (group < group_maps.array.len) : (group += 1) {
+        for (0..group_maps.array.len) |group| {
             const mapvec = group_maps.at(group);
             const ind = counts.at(group);
             const v = mapvec.at(ind).?;
@@ -1086,15 +1013,13 @@ fn backtrack_occurrences(index: usize, mines: u16, group_maps: *map.vecmapvec64,
             occurrences_map.set(mines, new_array);
             break :blk new_array;
         };
-        group = 0;
-        while (group < group_maps.array.len) : (group += 1) {
+        for (0..group_maps.array.len) |group| {
             const mapvec = group_maps.at(group);
             const ind = counts.at(group);
             const v = mapvec.at(ind).?;
             const bit_count = v.at(edge_cells_count);
 
-            var cell: u16 = 0;
-            while (cell < edge_cells_count) : (cell += 1) {
+            for (0..edge_cells_count) |cell| {
                 const b = v.at(cell) * (factor / bit_count);
                 arr.array[cell] += b;
             }
@@ -1104,11 +1029,10 @@ fn backtrack_occurrences(index: usize, mines: u16, group_maps: *map.vecmapvec64,
     }
 
     var mapvec = group_maps.at(index);
-    var cnt: u8 = 0;
-    while (cnt < mapvec.array.len) : (cnt += 1) {
+    for (0..mapvec.array.len) |cnt| {
         if (mapvec.has(cnt)) {
-            counts.set(index, cnt);
-            try backtrack_occurrences(index + 1, mines + cnt, group_maps, counts, occurrences_map);
+            counts.set(index, @truncate(cnt));
+            try backtrack_occurrences(index + 1, mines + @as(u16, @truncate(cnt)), group_maps, counts, occurrences_map);
         }
     }
 }
@@ -1117,15 +1041,13 @@ fn calculate_probabilities(combinations: *map.mapvec64) !void {
     if (remain_mines - combinations.first() <= float_cells_count) {
         var v_ec: u16 = std.math.maxInt(u16);
         var v_fc: u16 = std.math.maxInt(u16);
-        var m: u16 = 0;
-        while (m < combinations.array.len) : (m += 1) {
-            const array = combinations.at(m);
+        for (combinations.array, 0..) |array, m| {
             if (array) |_| {
-                const min_ec = @min(remain_mines -% m, float_cells_count -% (remain_mines -% m));
+                const min_ec = @min(remain_mines -% @as(u16, @truncate(m)), float_cells_count -% (remain_mines -% @as(u16, @truncate(m))));
                 if (v_ec > min_ec) {
                     v_ec = min_ec;
                 }
-                const min_fc = @min(remain_mines -% m -% 1, float_cells_count -% (remain_mines -% m));
+                const min_fc = @min(remain_mines -% @as(u16, @truncate(m)) -% 1, float_cells_count -% (remain_mines -% @as(u16, @truncate(m))));
                 if (v_fc > min_fc) {
                     v_fc = min_fc;
                 }
@@ -1137,16 +1059,14 @@ fn calculate_probabilities(combinations: *map.mapvec64) !void {
         var weights_fc: f64 = 0.0;
         var weights_sum: f64 = 0.0;
 
-        m = 0;
-        while (m < combinations.array.len) : (m += 1) {
-            const array = combinations.at(m);
+        for (combinations.array, 0..) |array, m| {
             if (array) |arr| {
-                const right: u16 = @min(remain_mines -% m, float_cells_count -% (remain_mines -% m));
+                const right: u16 = @min(remain_mines -% @as(u16, @truncate(m)), float_cells_count -% (remain_mines -% @as(u16, @truncate(m))));
                 const len = right - v_ec;
                 const left = float_cells_count + 1 - right;
                 const weight = calc_weight(left, right, len);
 
-                const right_fc: u16 = @min(remain_mines -% m -% 1, float_cells_count -% (remain_mines -% m));
+                const right_fc: u16 = @min(remain_mines -% @as(u16, @truncate(m)) -% 1, float_cells_count -% (remain_mines -% @as(u16, @truncate(m))));
                 const len_fc = right_fc - v_fc;
                 const left_fc = float_cells_count - right_fc;
                 const weight_fc = calc_weight(left_fc, right_fc, len_fc);
@@ -1166,18 +1086,13 @@ fn calculate_probabilities(combinations: *map.mapvec64) !void {
             }
         }
         const fc_prob_code: u8 = @as(u8, @intFromFloat(@round(fc_prob * 100.0))) + 27;
-        var i: u16 = 0;
-        while (i < float_cells_count) : (i += 1) {
-            const cell = float_cells_list.at(i);
+        for (float_cells_list.array[0..float_cells_count]) |cell| {
             game_field.set(cell, fc_prob_code);
         }
 
-        var cell: u16 = 0;
-        while (cell < edge_cells_count) : (cell += 1) {
+        for (0..edge_cells_count) |cell| {
             var cell_weight: f64 = 0.0;
-            m = 0;
-            while (m < combinations.array.len) : (m += 1) {
-                const array = combinations.at(m);
+            for (combinations.array, 0..) |array, m| {
                 if (array) |arr| {
                     cell_weight += @as(f64, @floatFromInt(arr.at(cell))) * weights_map.at(m);
                 }
@@ -1193,8 +1108,7 @@ fn calc_weight(left: u16, right: u16, len: u16) f64 {
     if (right == std.math.maxInt(u16)) {
         return 0.0;
     } else if (right > 0) {
-        var i: u16 = 0;
-        while (i < len) : (i += 1) {
+        for (0..len) |i| {
             result = result * @as(f64, @floatFromInt(left + i)) / @as(f64, @floatFromInt(right - i));
         }
     }
@@ -1229,9 +1143,7 @@ pub fn probs_field(field: vec.vec8) !vec.vec8 {
         } else {
             const float_prob: f64 = @as(f64, @floatFromInt(remain_mines)) / @as(f64, @floatFromInt(float_cells_count));
             const prob = @as(u8, @intFromFloat(@round(float_prob * 100.0))) + 27;
-            var i: usize = 0;
-            while (i < float_cells_list.size) : (i += 1) {
-                const cell = float_cells_list.at(i);
+            for (float_cells_list.array[0..float_cells_list.size]) |cell| {
                 game_field.set(cell, prob);
             }
             return game_field;
@@ -1241,8 +1153,7 @@ pub fn probs_field(field: vec.vec8) !vec.vec8 {
     var group_maps = try map.vecmapvec64.new(groups.size);
     defer group_maps.free();
 
-    var group: u8 = 0;
-    while (group < groups.size) : (group += 1) {
+    for (0..groups.size) |group| {
         const pair = groups.at(group);
         const edge_cells = pair.first;
         const num_cells = pair.second;

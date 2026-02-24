@@ -19,7 +19,6 @@ pub fn clicks(field: stl.vec.vec8) !stl.vec.dvec16 {
     const code = prob_field.at(0);
     if (code == 20 or code == 21 or code == 22) {
         std.debug.print("Error {d}\n", .{code});
-        // return suggests;
         return A.ProbsError;
     }
 
@@ -54,10 +53,9 @@ pub fn clicks(field: stl.vec.vec8) !stl.vec.dvec16 {
         min_val = @reduce(.Min, best);
 
         if (min_val != std.math.maxInt(i8)) {
-            i = 0;
-            while (i < prob_field.array.len) : (i += 1) {
-                if (prob_field.at(i) == min_val) {
-                    min_idx = i;
+            for (prob_field.array, 0..prob_field.array.len) |val, ind| {
+                if (val == min_val) {
+                    min_idx = @intCast(ind);
                     break;
                 }
             }

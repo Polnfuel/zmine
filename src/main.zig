@@ -41,8 +41,7 @@ pub fn main() !void {
 
     const start = try std.time.Instant.now();
 
-    var attempt: u32 = 0;
-    while (attempt < attempt_count) : (attempt += 1) {
+    for (0..attempt_count) |attempt| {
         try Engine.start_game(0, file_buffer[attempt * Engine.real_size .. attempt * Engine.real_size + 480]);
 
         while (Engine.playing) {
