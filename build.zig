@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const install_flds_step = b.addInstallFile(b.path("flds"), "flds");
+    const install_flds_step = b.addInstallFile(b.path("flds"), "bin/flds");
 
     switch (mode) {
         .Debug => {
@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 
             b.installArtifact(exe);
             b.getInstallStep().dependOn(&install_flds_step.step);
-            const run_step = b.step("run", "Run the app");
+            const run_step = b.step("run", "Run in Debug mode");
             const run_cmd = b.addRunArtifact(exe);
             run_step.dependOn(&run_cmd.step);
             run_cmd.step.dependOn(b.getInstallStep());
@@ -112,7 +112,7 @@ pub fn build(b: *std.Build) void {
 
             b.installArtifact(exesfast);
             b.getInstallStep().dependOn(&install_flds_step.step);
-            const run_step_fast = b.step("runfast", "Run in release fast mode");
+            const run_step_fast = b.step("run", "Run in ReleaseFast mode");
             const run_cmd_fast = b.addRunArtifact(exesfast);
             run_step_fast.dependOn(&run_cmd_fast.step);
             run_cmd_fast.step.dependOn(b.getInstallStep());
